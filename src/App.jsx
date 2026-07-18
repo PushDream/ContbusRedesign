@@ -12,7 +12,6 @@ import RoutesSection from "./components/RoutesSection.jsx";
 import TicketSystem from "./components/TicketSystem.jsx";
 import StopsSection from "./components/StopsSection.jsx";
 import ServiceBand from "./components/ServiceBand.jsx";
-import RouteMapSection from "./components/RouteMapSection.jsx";
 import ManageBooking from "./components/ManageBooking.jsx";
 import FAQSection from "./components/FAQSection.jsx";
 import ReviewsContact from "./components/ReviewsContact.jsx";
@@ -132,8 +131,6 @@ export default function App() {
       <StopsSection t={t} />
 
       <ServiceBand t={t} />
-
-      <RouteMapSection activeFare={activeFare} dark={dark} t={t} />
 
       <ManageBooking t={t} />
 

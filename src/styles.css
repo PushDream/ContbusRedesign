@@ -1899,89 +1899,6 @@ h3 {
   font-weight: 750;
 }
 
-/* ---------- Route map ---------- */
-
-.route-map-canvas {
-  height: 460px;
-  overflow: hidden;
-  border: 1px solid var(--border-soft);
-  border-radius: 8px;
-  box-shadow: 0 18px 58px var(--shadow);
-}
-
-.route-marker-wrap {
-  background: transparent;
-  border: 0;
-}
-
-.route-marker {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  color: #ffffff;
-  background: #172033;
-  border: 3px solid #ffffff;
-  border-radius: 999px;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.35);
-}
-
-.route-marker.airport {
-  background: #d71920;
-}
-
-.route-marker-active {
-  outline: 3px solid rgba(123, 191, 42, 0.85);
-  outline-offset: 2px;
-}
-
-.route-marker-bus {
-  width: 32px;
-  height: 32px;
-  background: var(--brand);
-  border-color: var(--bg-elevated);
-  box-shadow: 0 8px 20px rgba(0, 138, 61, 0.45);
-}
-
-.leaflet-container {
-  background: var(--surface-muted);
-  font-family: inherit;
-}
-
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip {
-  color: var(--text);
-  background: var(--bg-elevated);
-}
-
-.leaflet-popup-content {
-  font-size: 0.86rem;
-  line-height: 1.5;
-}
-
-.leaflet-popup-close-button {
-  color: var(--text-muted) !important;
-}
-
-.leaflet-control-zoom a {
-  color: var(--text) !important;
-  background: var(--bg-elevated) !important;
-  border-color: var(--border) !important;
-}
-
-.leaflet-control-zoom a:hover {
-  background: var(--surface-muted) !important;
-}
-
-.leaflet-control-attribution {
-  color: var(--text-muted);
-  background: var(--bg-translucent) !important;
-}
-
-.leaflet-control-attribution a {
-  color: var(--text-soft);
-}
-
 /* ---------- Manage booking ---------- */
 
 .manage-layout {
@@ -2322,10 +2239,6 @@ h3 {
     right: 12px;
     bottom: 86px;
     width: auto;
-  }
-
-  .route-map-canvas {
-    height: 320px;
   }
 }
 
