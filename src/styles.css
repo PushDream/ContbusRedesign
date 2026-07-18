@@ -1948,12 +1948,6 @@ h3 {
   font-family: inherit;
 }
 
-/* Leaflet 1.9's tile blend mode washes tiles out over any container
-   background; reset it so tiles render at normal opacity/color. */
-.leaflet-container img.leaflet-tile {
-  mix-blend-mode: normal;
-}
-
 .leaflet-popup-content-wrapper,
 .leaflet-popup-tip {
   color: var(--text);
