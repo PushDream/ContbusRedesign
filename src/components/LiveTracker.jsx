@@ -1,17 +1,9 @@
-import { useEffect, useState } from "react";
 import { Bus, Lock, MapPin, Navigation2 } from "lucide-react";
+import { useTripProgress } from "../lib/useTripProgress.js";
 
 export default function LiveTracker({ activeFare, t }) {
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 15000);
-    return () => clearInterval(interval);
-  }, []);
-
   const durationMinutes = activeFare.durationMinutes;
-  const minutesElapsed = (now / 60000) % durationMinutes;
-  const progress = Math.min(0.99, Math.max(0.01, minutesElapsed / durationMinutes));
+  const progress = useTripProgress(durationMinutes);
   const remaining = Math.round(durationMinutes * (1 - progress));
 
   const status =

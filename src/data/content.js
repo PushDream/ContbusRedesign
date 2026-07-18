@@ -55,6 +55,8 @@ export const stops = [
     meta: "ul. Dworcowa 2, stanowisko 1",
     detail:
       "Przystanek początkowy dla kursów Contbus w kierunku Warszawy, Lotniska Chopina i Lotniska Modlin.",
+    lat: 51.2367,
+    lng: 22.5735,
   },
   {
     id: "tysiaclecia",
@@ -63,6 +65,8 @@ export const stops = [
     meta: "Muzeum Narodowe - Zamek 04",
     detail:
       "Wygodny punkt odbioru pasażerów przy centrum miasta, widoczny w oficjalnym cenniku przewoźnika.",
+    lat: 51.2495,
+    lng: 22.5681,
   },
   {
     id: "warszawa",
@@ -71,6 +75,8 @@ export const stops = [
     meta: "ul. T. Chałubińskiego / Nowogrodzka",
     detail:
       "Przystanek w ścisłym centrum Warszawy, około 300 metrów od Warszawy Centralnej.",
+    lat: 52.2286,
+    lng: 21.008,
   },
   {
     id: "chopin",
@@ -79,6 +85,8 @@ export const stops = [
     meta: "terminal autokarowy, stanowisko 6",
     detail:
       "Po wyjściu z hali przylotów pasażerowie kierują się w prawo; busy stoją około 200 metrów od terminala.",
+    lat: 52.1672,
+    lng: 20.9679,
   },
   {
     id: "modlin",
@@ -87,8 +95,23 @@ export const stops = [
     meta: "bezpośrednio przed terminalem",
     detail:
       "Najprostszy odbiór i wysiadka dla podróży lotniczych z/do Nowego Dworu Mazowieckiego.",
+    lat: 52.4511,
+    lng: 20.6518,
   },
 ];
+
+// Slices the master stop list (already ordered Lublin -> Modlin) down to the
+// segment a given fare actually covers, matched by stop title.
+export function getRouteStopsForFare(fare) {
+  const matches = (label) =>
+    stops.filter((stop) => stop.title === label || stop.title.startsWith(label));
+  const startCandidates = matches(fare.from);
+  const endCandidates = matches(fare.to);
+  const startIndex = stops.indexOf(startCandidates[0]);
+  const endIndex = stops.indexOf(endCandidates[endCandidates.length - 1]);
+  const [from, to] = startIndex <= endIndex ? [startIndex, endIndex] : [endIndex, startIndex];
+  return stops.slice(from, to + 1);
+}
 
 export const testimonials = [
   {
@@ -397,6 +420,9 @@ export const copy = {
     arrivalShort: "Przyjazd",
     walletNotice:
       "Zapis w Apple/Google Wallet wymaga podpisu po stronie serwera przewoźnika - niedostępne w tym prototypie.",
+    routeMapTitle: "Mapa trasy",
+    routeMapLead: "Zobacz przystanki i kurs autobusu na żywo na rzeczywistej mapie.",
+    routeMapNextDeparture: "Najbliższy odjazd",
   },
   en: {
     code: "EN",
@@ -561,6 +587,9 @@ export const copy = {
     arrivalShort: "Arrival",
     walletNotice:
       "Apple/Google Wallet needs the carrier's server to sign the pass - not available in this prototype.",
+    routeMapTitle: "Route map",
+    routeMapLead: "See the stops and the live bus position on a real map.",
+    routeMapNextDeparture: "Next departure",
   },
   ua: {
     code: "UA",
@@ -725,5 +754,8 @@ export const copy = {
     arrivalShort: "Прибуття",
     walletNotice:
       "Apple/Google Wallet потребує підпису на сервері перевізника - недоступно в цьому прототипі.",
+    routeMapTitle: "Карта маршруту",
+    routeMapLead: "Перегляньте зупинки та позицію автобуса на реальній мапі в реальному часі.",
+    routeMapNextDeparture: "Найближче відправлення",
   },
 };
