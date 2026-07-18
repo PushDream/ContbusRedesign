@@ -1,9 +1,69 @@
-import { useState } from "react";
-import { Bus, ChevronRight, MapPinned, Plane } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import L from "leaflet";
+import { Bus, Clock3, MapPinned, Plane } from "lucide-react";
 import { stops } from "../data/content.js";
 
-export default function StopsSection({ t }) {
+function markerIcon(html, size) {
+  return L.divIcon({
+    html,
+    className: "route-marker-wrap",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
+
+function stopIcon(stop) {
+  const Icon = stop.type === "airport" ? Plane : Bus;
+  const html = renderToStaticMarkup(
+    <span className={`route-marker ${stop.type}`}>
+      <Icon size={16} />
+    </span>,
+  );
+  return markerIcon(html, 34);
+}
+
+function FocusStop({ stop }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView([stop.lat, stop.lng], 15);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stop.id]);
+  return null;
+}
+
+function ActiveStopMarker({ stop, t }) {
+  const markerRef = useRef(null);
+
+  useEffect(() => {
+    markerRef.current?.openPopup();
+  }, []);
+
+  return (
+    <Marker icon={stopIcon(stop)} position={[stop.lat, stop.lng]} ref={markerRef}>
+      <Popup autoPan={false} closeButton={false}>
+        <strong>{stop.title}</strong>
+        <br />
+        {stop.meta}
+        <br />
+        {stop.directions}
+        <br />
+        {t.stopArriveBefore.replace("{minutes}", stop.arriveMinutesBefore)}
+      </Popup>
+    </Marker>
+  );
+}
+
+export default function StopsSection({ dark, t }) {
   const [activeStop, setActiveStop] = useState(stops[0]);
+
+  const tileUrl = dark
+    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  const tileAttribution = dark
+    ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
   return (
     <section className="section stops-section" id="stops">
@@ -13,27 +73,9 @@ export default function StopsSection({ t }) {
           <h2>{t.stopsLead}</h2>
         </div>
       </div>
-      <div className="stops-layout">
-        <div className="stop-map" aria-hidden="true">
-          {stops.map((stop, index) => (
-            <button
-              className={[
-                "map-stop",
-                stop.type,
-                activeStop.id === stop.id ? "active" : "",
-              ].join(" ")}
-              key={stop.id}
-              style={{ "--x": `${12 + index * 19}%`, "--y": `${64 - (index % 3) * 20}%` }}
-              type="button"
-              onClick={() => setActiveStop(stop)}
-              aria-label={stop.title}
-            >
-              {stop.type === "airport" ? <Plane size={17} /> : <Bus size={17} />}
-            </button>
-          ))}
-          <div className="map-road" />
-        </div>
-        <div className="stop-list">
+
+      <div className="stops-compact-layout">
+        <div className="stop-cards-list">
           {stops.map((stop) => (
             <button
               className={activeStop.id === stop.id ? "stop-card active" : "stop-card"}
@@ -41,26 +83,32 @@ export default function StopsSection({ t }) {
               type="button"
               onClick={() => setActiveStop(stop)}
             >
-              <MapPinned size={19} />
+              <MapPinned size={18} />
               <span>
                 <strong>{stop.title}</strong>
                 <small>{stop.meta}</small>
+                <small className="stop-arrive">
+                  <Clock3 size={13} />
+                  {t.stopArriveBefore.replace("{minutes}", stop.arriveMinutesBefore)}
+                </small>
+                <small>{stop.directions}</small>
               </span>
             </button>
           ))}
         </div>
-        <article className="stop-detail">
-          <p className="eyebrow">
-            {activeStop.type === "airport" ? t.stopTypeAirport : t.stopTypeCity}
-          </p>
-          <h3>{activeStop.title}</h3>
-          <strong>{activeStop.meta}</strong>
-          <p>{activeStop.detail}</p>
-          <a href="#tickets">
-            {t.buy}
-            <ChevronRight size={18} />
-          </a>
-        </article>
+
+        <div className="stop-map-live">
+          <MapContainer
+            center={[activeStop.lat, activeStop.lng]}
+            scrollWheelZoom={false}
+            style={{ height: "100%", width: "100%" }}
+            zoom={15}
+          >
+            <TileLayer attribution={tileAttribution} url={tileUrl} />
+            <FocusStop stop={activeStop} />
+            <ActiveStopMarker key={activeStop.id} stop={activeStop} t={t} />
+          </MapContainer>
+        </div>
       </div>
     </section>
   );

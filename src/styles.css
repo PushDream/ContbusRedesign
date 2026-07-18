@@ -351,7 +351,6 @@ h3 {
 
 .search-card,
 .booking-panel,
-.stop-detail,
 .review-card,
 .contact-card,
 .ticket-app,
@@ -1009,71 +1008,27 @@ h3 {
   color: #ffffff;
 }
 
-.stops-layout {
+.stops-compact-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.55fr) minmax(300px, 0.75fr);
-  gap: 20px;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 16px;
   align-items: stretch;
 }
 
-.stop-map {
-  position: relative;
-  min-height: 420px;
-  overflow: hidden;
-  background:
-    linear-gradient(90deg, rgba(23, 32, 51, 0.06) 1px, transparent 1px),
-    linear-gradient(rgba(23, 32, 51, 0.06) 1px, transparent 1px),
-    var(--surface-muted);
-  background-size: 34px 34px;
-  border-radius: 8px;
-}
-
-.map-road {
-  position: absolute;
-  left: 9%;
-  right: 9%;
-  top: 51%;
-  height: 8px;
-  background: #7bbf2a;
-  border-radius: 999px;
-  transform: rotate(-10deg);
-}
-
-.map-stop {
-  position: absolute;
-  left: var(--x);
-  top: var(--y);
-  z-index: 2;
+.stop-cards-list {
   display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  color: #ffffff;
-  background: #172033;
-  border: 4px solid var(--surface-muted);
-  border-radius: 8px;
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
-}
-
-.map-stop.airport {
-  background: #d71920;
-}
-
-.map-stop.active {
-  outline: 4px solid rgba(123, 191, 42, 0.72);
-}
-
-.stop-list {
-  display: grid;
-  gap: 10px;
+  gap: 8px;
+  align-content: start;
+  max-height: 380px;
+  overflow-y: auto;
 }
 
 .stop-card {
   display: grid;
-  grid-template-columns: 22px 1fr;
-  gap: 12px;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
   align-items: start;
-  padding: 14px;
+  padding: 10px 12px;
   color: var(--text);
   text-align: left;
   background: var(--bg-elevated);
@@ -1086,40 +1041,27 @@ h3 {
 }
 
 .stop-card svg {
+  flex: 0 0 auto;
   color: var(--brand);
 }
 
 .stop-card span {
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 .stop-card small {
   color: var(--text-muted);
-  line-height: 1.35;
+  line-height: 1.3;
+  font-size: 0.78rem;
 }
 
-.stop-detail {
-  padding: 22px;
-}
-
-.stop-detail strong {
-  display: block;
-  margin-bottom: 12px;
-  color: var(--brand);
-}
-
-.stop-detail p {
-  color: var(--text-muted);
-  line-height: 1.65;
-}
-
-.stop-detail a {
-  display: inline-flex;
+.stop-arrive {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  color: var(--brand);
-  font-weight: 900;
+  gap: 4px;
+  color: var(--brand-dark) !important;
+  font-weight: 800;
 }
 
 .service-band {
@@ -1272,9 +1214,12 @@ h3 {
 
   .hero-inner,
   .routes-layout,
-  .stops-layout,
   .reviews-contact,
   .ticket-app {
+    grid-template-columns: 1fr;
+  }
+
+  .stops-compact-layout {
     grid-template-columns: 1fr;
   }
 
@@ -1390,8 +1335,8 @@ h3 {
     flex-direction: column;
   }
 
-  .stop-map {
-    min-height: 300px;
+  .stop-cards-list {
+    max-height: 160px;
   }
 
   .ticket-card {
@@ -1899,10 +1844,10 @@ h3 {
   font-weight: 750;
 }
 
-/* ---------- Route map ---------- */
+/* ---------- Stops live map ---------- */
 
-.route-map-canvas {
-  height: 460px;
+.stop-map-live {
+  height: 380px;
   overflow: hidden;
   border: 1px solid var(--border-soft);
   border-radius: 8px;
@@ -1928,19 +1873,6 @@ h3 {
 
 .route-marker.airport {
   background: #d71920;
-}
-
-.route-marker-active {
-  outline: 3px solid rgba(123, 191, 42, 0.85);
-  outline-offset: 2px;
-}
-
-.route-marker-bus {
-  width: 32px;
-  height: 32px;
-  background: var(--brand);
-  border-color: var(--bg-elevated);
-  box-shadow: 0 8px 20px rgba(0, 138, 61, 0.45);
 }
 
 .leaflet-container {
@@ -2330,8 +2262,8 @@ h3 {
     width: auto;
   }
 
-  .route-map-canvas {
-    height: 320px;
+  .stop-map-live {
+    height: 220px;
   }
 }
 
