@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { ArrowLeftRight, CalendarDays, Navigation, Search, TimerReset } from "lucide-react";
 import { fares } from "../data/content.js";
 

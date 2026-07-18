@@ -1,4 +1,3 @@
-import React from "react";
 import { Clock3, Mail, Phone, Ticket } from "lucide-react";
 import { testimonials } from "../data/content.js";
 

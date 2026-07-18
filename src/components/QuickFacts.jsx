@@ -1,4 +1,3 @@
-import React from "react";
 import { BadgeCheck, Phone, Plane, Snowflake } from "lucide-react";
 
 export default function QuickFacts({ t }) {

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowRight, Check, Route, ShieldCheck } from "lucide-react";
 import { departureTimes, fares, regulationsUrl } from "../data/content.js";
 

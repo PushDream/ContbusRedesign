@@ -1,4 +1,3 @@
-import React from "react";
 import { Clock3, ShieldCheck, Users } from "lucide-react";
 
 export default function TrustBand({ t }) {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Download, Mail, Search, TicketX, TriangleAlert } from "lucide-react";
 import { estimateArrival, fares, hashString, logoUrl } from "../data/content.js";
 import { useToast } from "../lib/ToastProvider.jsx";

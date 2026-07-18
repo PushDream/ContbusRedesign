@@ -1,4 +1,3 @@
-import React from "react";
 import { Download, Languages, Menu, Moon, Sun, X } from "lucide-react";
 import { copy, logoUrl } from "../data/content.js";
 

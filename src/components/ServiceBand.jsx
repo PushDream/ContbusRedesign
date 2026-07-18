@@ -1,4 +1,3 @@
-import React from "react";
 import { BriefcaseBusiness, QrCode, ShieldCheck } from "lucide-react";
 import { regulationsUrl } from "../data/content.js";
 

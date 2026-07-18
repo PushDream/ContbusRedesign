@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Bus, ChevronRight, MapPinned, Plane } from "lucide-react";
 import { stops } from "../data/content.js";
 

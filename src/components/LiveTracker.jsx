@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Bus, Lock, MapPin, Navigation2 } from "lucide-react";
 
 export default function LiveTracker({ activeFare, t }) {

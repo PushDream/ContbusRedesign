@@ -1,4 +1,3 @@
-import React from "react";
 import { Home, Navigation2, Ticket, UserRound } from "lucide-react";
 
 export default function MobileTabBar({ t }) {

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { SEAT_LAYOUT, buildSeatMap } from "../data/content.js";
 
 export default function SeatMap({ fareId, departureIndex, maxSeats, selected, onToggle, t }) {

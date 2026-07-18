@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Download, Ticket } from "lucide-react";
 import { copy, fares } from "./data/content.js";
 import { useDarkMode } from "./lib/useDarkMode.js";
