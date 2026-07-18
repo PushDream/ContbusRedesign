@@ -3,7 +3,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MapContainer, Marker, Polyline, Popup, TileLayer } from "react-leaflet";
 import L from "leaflet";
 import { Bus, Plane } from "lucide-react";
-import "leaflet/dist/leaflet.css";
 import { departureTimes, estimateArrival, getRouteStopsForFare, stops } from "../data/content.js";
 import { useTripProgress } from "../lib/useTripProgress.js";
 import { interpolateAlongRoute } from "../lib/geo.js";
