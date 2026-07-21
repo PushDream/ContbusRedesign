@@ -1227,14 +1227,40 @@ h3 {
 }
 
 .footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
+  display: grid;
+  gap: 14px;
   padding: 28px 42px;
   color: var(--text-muted);
   background: var(--bg-elevated);
   border-top: 1px solid var(--border);
   font-size: 0.9rem;
+}
+
+.footer-main {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.footer-credit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.footer-credit-logo {
+  display: block;
+  height: 14px;
+  width: auto;
+}
+
+:root[data-theme="dark"] .footer-credit-logo {
+  filter: brightness(0) invert(1);
 }
 
 @media (max-width: 1020px) {
@@ -1380,7 +1406,7 @@ h3 {
   .fare-card footer,
   .panel-header,
   .ticket-preview,
-  .footer {
+  .footer-main {
     align-items: flex-start;
     flex-direction: column;
   }
