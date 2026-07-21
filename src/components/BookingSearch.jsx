@@ -1,31 +1,34 @@
 import { useState } from "react";
-import { ArrowLeftRight, CalendarDays, Navigation, Search, TimerReset } from "lucide-react";
-import { fares } from "../data/content.js";
+import { ArrowLeftRight, CalendarDays, Navigation, Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useApp } from "../context/AppContext.jsx";
 
 const locations = ["Lublin", "Lotnisko Chopina", "Warszawa Marriott", "Lotnisko Modlin"];
 
-export default function BookingSearch({ passengers, setPassengers, setActiveFare, t }) {
+const today = new Date().toISOString().slice(0, 10);
+
+export default function BookingSearch({ passengers, setPassengers }) {
+  const { t } = useApp();
+  const navigate = useNavigate();
   const [tripType, setTripType] = useState("oneWay");
   const [from, setFrom] = useState("Lublin");
   const [to, setTo] = useState("Warszawa Marriott");
+  const [date, setDate] = useState(today);
 
   const swap = () => {
     setFrom(to);
     setTo(from);
   };
 
-  const matchRoute = () => {
-    const match = fares.find(
-      (fare) =>
-        fare.from.toLowerCase().includes(from.toLowerCase()) &&
-        fare.to.toLowerCase().includes(to.toLowerCase()),
+  const handleSearch = (event) => {
+    event.preventDefault();
+    navigate(
+      `/results?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&date=${date}&passengers=${passengers}`,
     );
-    if (match) setActiveFare(match);
-    document.getElementById("routes")?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
-    <form className="search-card" onSubmit={(event) => event.preventDefault()}>
+    <form className="search-card" onSubmit={handleSearch}>
       <div className="search-card-header">
         <Navigation size={20} />
         <h2>{t.searchTitle}</h2>
@@ -61,12 +64,7 @@ export default function BookingSearch({ passengers, setPassengers, setActiveFare
             ))}
           </select>
         </label>
-        <button
-          aria-label={t.swapLabel}
-          className="swap-button"
-          onClick={swap}
-          type="button"
-        >
+        <button aria-label={t.swapLabel} className="swap-button" onClick={swap} type="button">
           <ArrowLeftRight size={16} />
         </button>
         <label>
@@ -84,7 +82,7 @@ export default function BookingSearch({ passengers, setPassengers, setActiveFare
           <span>{t.date}</span>
           <div className="input-shell">
             <CalendarDays size={18} />
-            <input type="date" defaultValue="2026-07-18" />
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
         </label>
         {tripType === "roundTrip" && (
@@ -92,7 +90,7 @@ export default function BookingSearch({ passengers, setPassengers, setActiveFare
             <span>{t.returnDate}</span>
             <div className="input-shell">
               <CalendarDays size={18} />
-              <input type="date" defaultValue="2026-07-21" />
+              <input type="date" defaultValue={today} />
             </div>
           </label>
         )}
@@ -101,24 +99,20 @@ export default function BookingSearch({ passengers, setPassengers, setActiveFare
       <label>
         <span>{t.passengers}</span>
         <div className="stepper">
-          <button type="button" onClick={() => setPassengers((value) => Math.max(1, value - 1))}>
+          <button type="button" onClick={() => setPassengers((v) => Math.max(1, v - 1))}>
             -
           </button>
           <strong>{passengers}</strong>
-          <button type="button" onClick={() => setPassengers((value) => Math.min(8, value + 1))}>
+          <button type="button" onClick={() => setPassengers((v) => Math.min(8, v + 1))}>
             +
           </button>
         </div>
       </label>
 
-      <button className="primary-button full" type="button" onClick={matchRoute}>
+      <button className="primary-button full" type="submit">
         <Search size={18} />
         {t.search}
       </button>
-      <a className="inline-link" href="#tickets">
-        <TimerReset size={16} />
-        {t.download}
-      </a>
     </form>
   );
 }

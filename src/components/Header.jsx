@@ -1,4 +1,5 @@
 import { Download, Languages, Menu, Moon, Sun, X } from "lucide-react";
+import { NavLink } from "react-router-dom";
 import { copy, logoUrl } from "../data/content.js";
 
 export default function Header({
@@ -12,11 +13,18 @@ export default function Header({
   onInstall,
   t,
 }) {
+  const navLinks = [
+    { to: "/", label: t.navHome, end: true },
+    { to: "/results", label: t.nav[1] },
+    { to: "/moje-bilety", label: t.quickNavMyTickets },
+    { to: "/kontakt", label: t.nav[5] },
+  ];
+
   return (
     <header className="topbar">
-      <a className="brand" href="#home" aria-label="Contbus">
+      <NavLink className="brand" to="/" aria-label="Contbus">
         <img src={logoUrl} alt="Contbus" />
-      </a>
+      </NavLink>
 
       <button
         className="icon-button menu-button"
@@ -28,24 +36,17 @@ export default function Header({
       </button>
 
       <nav className={mobileNav ? "nav open" : "nav"}>
-        <a href="#tickets" onClick={() => setMobileNav(false)}>
-          {t.nav[0]}
-        </a>
-        <a href="#routes" onClick={() => setMobileNav(false)}>
-          {t.nav[1]}
-        </a>
-        <a href="#manage" onClick={() => setMobileNav(false)}>
-          {t.nav[2]}
-        </a>
-        <a href="#stops" onClick={() => setMobileNav(false)}>
-          {t.nav[3]}
-        </a>
-        <a href="#passenger" onClick={() => setMobileNav(false)}>
-          {t.nav[4]}
-        </a>
-        <a href="#contact" onClick={() => setMobileNav(false)}>
-          {t.nav[5]}
-        </a>
+        {navLinks.map(({ to, label, end }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            className={({ isActive }) => (isActive ? "active" : undefined)}
+            onClick={() => setMobileNav(false)}
+          >
+            {label}
+          </NavLink>
+        ))}
       </nav>
 
       <div className="header-actions">
