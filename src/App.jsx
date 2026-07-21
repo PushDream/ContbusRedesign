@@ -5,7 +5,10 @@ import { useDarkMode } from "./lib/useDarkMode.js";
 import { useToast } from "./lib/ToastProvider.jsx";
 
 import Header from "./components/Header.jsx";
+import MobileAnchorNav from "./components/MobileAnchorNav.jsx";
+import StickySearchBar from "./components/StickySearchBar.jsx";
 import BookingSearch from "./components/BookingSearch.jsx";
+import MobileCollapsibleSection from "./components/MobileCollapsibleSection.jsx";
 import QuickFacts from "./components/QuickFacts.jsx";
 import TrustBand from "./components/TrustBand.jsx";
 import RoutesSection from "./components/RoutesSection.jsx";
@@ -73,6 +76,8 @@ export default function App() {
         setMobileNav={setMobileNav}
         t={t}
       />
+      <MobileAnchorNav t={t} />
+      <StickySearchBar activeFare={activeFare} passengers={passengers} t={t} />
 
       <section className="hero" id="home">
         <div className="hero-photo" aria-hidden="true" />
@@ -110,8 +115,10 @@ export default function App() {
         </div>
       </section>
 
-      <QuickFacts t={t} />
-      <TrustBand t={t} />
+      <MobileCollapsibleSection t={t}>
+        <QuickFacts t={t} />
+        <TrustBand t={t} />
+      </MobileCollapsibleSection>
 
       <RoutesSection
         activeFare={activeFare}
@@ -130,7 +137,9 @@ export default function App() {
 
       <StopsSection t={t} />
 
-      <ServiceBand t={t} />
+      <MobileCollapsibleSection t={t}>
+        <ServiceBand t={t} />
+      </MobileCollapsibleSection>
 
       <ManageBooking t={t} />
 
