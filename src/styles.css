@@ -2532,6 +2532,12 @@ h3 {
   text-align: right;
 }
 
+.result-platform {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
 .result-duration {
   flex: 1;
   display: grid;
@@ -2815,6 +2821,19 @@ h3 {
   flex-wrap: wrap;
   justify-content: center;
   gap: 12px;
+}
+
+.ticket-platform-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: -8px auto 8px;
+}
+
+.ticket-platform-row strong {
+  color: var(--text-strong);
 }
 
 /* ============================================================

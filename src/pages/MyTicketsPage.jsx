@@ -3,7 +3,7 @@ import { Download, Mail, Search, Ticket, TicketX, TriangleAlert } from "lucide-r
 import { ArrowRight } from "lucide-react";
 import { useApp } from "../context/AppContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
-import { estimateArrival, fares, hashString, logoUrl } from "../data/content.js";
+import { estimateArrival, fares, getPlatform, hashString, logoUrl } from "../data/content.js";
 import { downloadTicketPdf } from "../lib/ticketPdf.js";
 
 const DEMO_CODE = "CB-3ZZTLH";
@@ -18,14 +18,16 @@ function buildDemoTicket(code) {
   const seed = hashString(code.trim().toUpperCase());
   const route = routes[seed % routes.length];
   const times = ["06:40", "08:15", "11:30", "14:10"];
+  const time = times[seed % times.length];
   return {
     code: code.trim().toUpperCase(),
     from: route[0],
     to: route[1],
-    time: times[seed % times.length],
+    time,
     date: "2026-07-21",
     seat: `${(seed % 10) + 2}${["A", "B", "C", "D"][seed % 4]}`,
     passenger: "Jan Kowalski",
+    platform: getPlatform(route[0], route[1], time),
     status: "active",
   };
 }
@@ -175,6 +177,12 @@ export default function MyTicketsPage() {
                 <span>Kod</span>
                 <strong>{ticket.code}</strong>
               </div>
+              {ticket.platform && (
+                <div>
+                  <span>Peron</span>
+                  <strong>{ticket.platform}</strong>
+                </div>
+              )}
             </div>
 
             <div className="ticket-card-qr">

@@ -1,7 +1,7 @@
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Clock, MapPin, Users } from "lucide-react";
 import { useApp } from "../context/AppContext.jsx";
-import { estimateArrival, fares, hashString, seededRandom } from "../data/content.js";
+import { estimateArrival, fares, getPlatform, hashString, seededRandom } from "../data/content.js";
 
 const DEPARTURES = [
   { time: "06:40" },
@@ -87,6 +87,7 @@ export default function ResultsPage() {
           const arrival = estimateArrival(dep.time);
           const seats = getSeatsLeft(matchedFare.id, dep.time);
           const totalPrice = matchedFare.price * passengers;
+          const platform = getPlatform(from, to, dep.time);
 
           return (
             <article className="result-card" key={dep.time}>
@@ -94,6 +95,7 @@ export default function ResultsPage() {
                 <div className="result-time">
                   <strong>{dep.time}</strong>
                   <span>{from}</span>
+                  {platform && <span className="result-platform">{platform}</span>}
                 </div>
                 <div className="result-duration">
                   <div className="result-duration-line" />

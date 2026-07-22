@@ -20,6 +20,7 @@ import {
   buildSeatMap,
   estimateArrival,
   fares,
+  getPlatform,
   hashString,
   logoUrl,
 } from "../data/content.js";
@@ -73,6 +74,7 @@ export default function BookingPage() {
 
   const fare = fares.find((f) => f.id === fareId) || fares[0];
   const arrival = estimateArrival(departure);
+  const platform = getPlatform(from, to, departure);
 
   const bookingCode = useMemo(
     () => genBookingCode(hashString(`${fareId}-${departure}-${date}`)),
@@ -418,6 +420,13 @@ export default function BookingPage() {
               <div className="qr-real">
                 <QRCodeSVG value={ticketPayload} size={150} bgColor="#ffffff" fgColor="#101827" />
               </div>
+
+              {platform && (
+                <div className="ticket-platform-row">
+                  <span>Peron odjazdu</span>
+                  <strong>{platform}</strong>
+                </div>
+              )}
 
               <div className="confirmation-actions">
                 <button

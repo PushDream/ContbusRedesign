@@ -145,6 +145,24 @@ export function estimateArrival(departure) {
   return `${String(hour).padStart(2, "0")}:${departure.slice(3)}`;
 }
 
+// Deterministic per route/time so the same departure shows the same platform
+// everywhere (results list, booking ticket, my tickets). Modlin is just a bus
+// stop, so it never gets a "Peron" - and not every departure has one.
+export function getPlatform(from, to, time) {
+  if (/modlin/i.test(from) || /modlin/i.test(to)) return null;
+
+  const rng = seededRandom(hashString(`platform-${from}-${to}-${time}`));
+  if (rng() >= 0.7) return null;
+
+  if (from.trim().toLowerCase() === "lublin") {
+    return rng() < 0.5 ? "Peron 3" : "Peron 5";
+  }
+  if (from.trim().toLowerCase().startsWith("warszawa")) {
+    return rng() < 0.5 ? "Peron 12" : "Peron 14";
+  }
+  return null;
+}
+
 export const SEAT_ROWS = 11;
 export const SEAT_LAYOUT = ["A", "B", null, "C", "D"];
 
