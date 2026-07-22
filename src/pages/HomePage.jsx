@@ -5,6 +5,7 @@ import { useApp } from "../context/AppContext.jsx";
 import BookingSearch from "../components/BookingSearch.jsx";
 import QuickFacts from "../components/QuickFacts.jsx";
 import TrustBand from "../components/TrustBand.jsx";
+import ReviewsSection from "../components/ReviewsSection.jsx";
 import FAQSection from "../components/FAQSection.jsx";
 
 export default function HomePage() {
@@ -39,6 +40,7 @@ export default function HomePage() {
 
       <QuickFacts t={t} />
       <TrustBand t={t} />
+      <ReviewsSection t={t} />
       <FAQSection language={language} t={t} />
     </>
   );

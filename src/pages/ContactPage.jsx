@@ -1,7 +1,6 @@
 import { Clock3, Mail, MapPin, Phone, Ticket } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useApp } from "../context/AppContext.jsx";
-import { testimonials } from "../data/content.js";
 
 export default function ContactPage() {
   const { t } = useApp();
@@ -71,19 +70,6 @@ export default function ContactPage() {
             <Ticket size={18} />
             {t.buy}
           </Link>
-        </div>
-
-        <div className="reviews-section">
-          <h2>{t.reviews}</h2>
-          <div className="reviews">
-            {testimonials.map((item) => (
-              <article className="review-card" key={item.name}>
-                <div className="stars">★★★★★</div>
-                <p>{item.body}</p>
-                <strong>{item.name}</strong>
-              </article>
-            ))}
-          </div>
         </div>
       </div>
     </div>
