@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download, Mail, Search, Ticket, TicketX, TriangleAlert } from "lucide-react";
+import { Download, Mail, Search, TicketX, TriangleAlert } from "lucide-react";
 import { ArrowRight } from "lucide-react";
 import { useApp } from "../context/AppContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";

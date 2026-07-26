@@ -1,4 +1,4 @@
-import { Download, Languages, Menu, Moon, Sun, X } from "lucide-react";
+import { Languages, Menu, Moon, Sun, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { copy, logoUrl } from "../data/content.js";
 
@@ -9,14 +9,13 @@ export default function Header({
   setMobileNav,
   dark,
   setDark,
-  canInstall,
-  onInstall,
   t,
 }) {
   const navLinks = [
     { to: "/", label: t.navHome, end: true },
     { to: "/results", label: t.nav[1] },
     { to: "/moje-bilety", label: t.quickNavMyTickets },
+    { to: "/driver", label: t.driverNav },
     { to: "/kontakt", label: t.nav[5] },
   ];
 
@@ -50,13 +49,6 @@ export default function Header({
       </nav>
 
       <div className="header-actions">
-        {canInstall && (
-          <button className="icon-button install-chip" onClick={onInstall} type="button">
-            <Download size={16} />
-            <span>{t.installButton}</span>
-          </button>
-        )}
-
         <button
           className="icon-button"
           aria-label={dark ? t.lightMode : t.darkMode}
