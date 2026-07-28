@@ -1265,6 +1265,385 @@ h3 {
   }
 }
 
+/* ---------- Dispatcher dashboard ---------- */
+.admin-page {
+  width: min(1240px, calc(100% - 42px));
+  margin: 0 auto;
+  padding: 38px 0 86px;
+}
+
+.admin-hero {
+  display: flex;
+  gap: 24px;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 32px;
+  color: #ffffff;
+  background:
+    linear-gradient(135deg, rgba(0, 107, 49, 0.96), rgba(16, 24, 39, 0.92)),
+    url("https://www.contbus.pl/wp-content/uploads/2022/07/DSC_0323-1024x680-1.jpg") center / cover;
+  border-radius: 8px;
+  box-shadow: 0 22px 50px var(--shadow-strong);
+}
+
+.admin-hero h1 {
+  margin: 4px 0 8px;
+  font-size: clamp(2.1rem, 5vw, 4rem);
+  line-height: 0.95;
+}
+
+.admin-hero p {
+  max-width: 720px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.admin-toolbar label {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 14px;
+  color: var(--text-strong);
+  background: #ffffff;
+  border-radius: 8px;
+}
+
+.admin-toolbar input {
+  color: inherit;
+  background: transparent;
+  border: 0;
+  font-weight: 800;
+}
+
+.admin-alert {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 16px;
+  padding: 14px 16px;
+  color: #7a4b00;
+  background: #fff7df;
+  border: 1px solid #f0d690;
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.admin-alert.danger {
+  color: var(--danger);
+  background: var(--danger-soft-bg);
+  border-color: rgba(215, 25, 32, 0.25);
+}
+
+.admin-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.admin-metric,
+.admin-panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 16px 34px var(--shadow);
+}
+
+.admin-metric {
+  min-height: 150px;
+  padding: 18px;
+}
+
+.admin-metric-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 14px;
+  color: var(--brand);
+  background: var(--brand-soft-bg);
+  border-radius: 8px;
+}
+
+.admin-metric span,
+.admin-metric small,
+.admin-trip-meta,
+.admin-trip-numbers span,
+.admin-route-row span,
+.admin-booking-row span,
+.admin-empty {
+  color: var(--text-muted);
+}
+
+.admin-metric span,
+.admin-metric small {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.admin-metric strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-strong);
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.admin-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.65fr);
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.admin-panel {
+  overflow: hidden;
+}
+
+.admin-panel.compact {
+  box-shadow: none;
+}
+
+.admin-panel-header {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-panel-header h2 {
+  margin: 2px 0 0;
+  color: var(--text-strong);
+  font-size: 1.1rem;
+}
+
+.admin-chip {
+  padding: 8px 10px;
+  color: var(--brand-dark);
+  background: var(--brand-soft-bg);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.admin-trip-list,
+.admin-route-list,
+.admin-booking-list {
+  display: grid;
+}
+
+.admin-trip-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 104px;
+  gap: 16px;
+  align-items: center;
+  min-height: 102px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.admin-trip-row:last-child,
+.admin-route-row:last-child,
+.admin-booking-row:last-child {
+  border-bottom: 0;
+}
+
+.admin-trip-time strong,
+.admin-trip-numbers strong,
+.admin-route-row strong,
+.admin-booking-row strong {
+  display: block;
+  color: var(--text-strong);
+}
+
+.admin-trip-time strong {
+  font-size: 1.3rem;
+}
+
+.admin-trip-time span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.admin-trip-main {
+  min-width: 0;
+}
+
+.admin-trip-title {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.admin-trip-title strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-status {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  color: var(--text-soft);
+  background: var(--surface-muted);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.admin-status.boarding,
+.admin-status.departed {
+  color: var(--brand-dark);
+  background: var(--brand-soft-bg);
+}
+
+.admin-status.delayed {
+  color: #8a5600;
+  background: #fff1ca;
+}
+
+.admin-status.arrived {
+  color: #35506b;
+  background: #e8eef7;
+}
+
+.admin-trip-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 7px 0 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.admin-progress {
+  height: 8px;
+  overflow: hidden;
+  background: var(--surface-muted);
+  border-radius: 999px;
+}
+
+.admin-progress span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand), #40b9d4);
+  border-radius: inherit;
+}
+
+.admin-trip-numbers {
+  text-align: right;
+}
+
+.admin-route-row,
+.admin-booking-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 74px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.admin-booking-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.admin-route-row span,
+.admin-booking-row span {
+  display: block;
+  max-width: 260px;
+  overflow: hidden;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-side {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.admin-empty {
+  margin: 0;
+  padding: 22px;
+  font-weight: 800;
+}
+
+@media (max-width: 1060px) {
+  .admin-metrics-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-page {
+    width: min(100% - 24px, 1240px);
+    padding-top: 18px;
+  }
+
+  .admin-hero {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 24px;
+  }
+
+  .admin-toolbar {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .admin-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-trip-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-trip-numbers {
+    text-align: left;
+  }
+}
+
+@media (max-width: 460px) {
+  .admin-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-route-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-route-row > div:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
 :root[data-theme="dark"] .footer-credit-logo {
   filter: brightness(0) invert(1);
 }

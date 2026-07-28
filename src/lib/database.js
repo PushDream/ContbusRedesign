@@ -143,3 +143,115 @@ export async function createBookingRecord({
 
   return Array.isArray(data) ? data[0] : data;
 }
+
+function formatStationName(value) {
+  if (!value) return "Przystanek";
+  if (value.includes("Lublin")) return "Lublin";
+  return value;
+}
+
+function mapPublicTrip({ trip, routeById, stationById }) {
+  const route = routeById[trip.route_id];
+  const origin = stationById[route?.origin_station_id];
+  const destination = stationById[route?.destination_station_id];
+
+  return {
+    id: trip.id,
+    departure_date: trip.departure_date,
+    departure_time: trip.departure_time,
+    arrival_time: trip.arrival_time,
+    status: trip.status,
+    platform: trip.platform,
+    capacity: trip.capacity,
+    price: Number(trip.price),
+    route_code: route?.code || "-",
+    duration_minutes: route?.duration_minutes || 0,
+    base_price: Number(route?.base_price || trip.price || 0),
+    origin_name: formatStationName(origin?.name),
+    destination_name: formatStationName(destination?.name),
+    vehicle_label: "Do przypisania",
+    plate_number: "",
+    booking_count: 0,
+    passenger_count: 0,
+    revenue_total: 0,
+  };
+}
+
+async function fetchPublicDispatcherOverview(date) {
+  const [
+    { data: stations, error: stationsError },
+    { data: routes, error: routesError },
+    { data: trips, error: tripsError },
+  ] = await Promise.all([
+    supabase.from("stations").select("*").eq("active", true),
+    supabase.from("routes").select("*").eq("active", true),
+    supabase
+      .from("trips")
+      .select("*")
+      .eq("departure_date", date)
+      .neq("status", "cancelled")
+      .order("departure_time", { ascending: true }),
+  ]);
+
+  if (stationsError) throw stationsError;
+  if (routesError) throw routesError;
+  if (tripsError) throw tripsError;
+
+  const stationById = Object.fromEntries((stations || []).map((station) => [station.id, station]));
+  const routeById = Object.fromEntries((routes || []).map((route) => [route.id, route]));
+  const mappedTrips = (trips || []).map((trip) => mapPublicTrip({ trip, routeById, stationById }));
+
+  const routeRows = (routes || []).map((route) => {
+    const origin = stationById[route.origin_station_id];
+    const destination = stationById[route.destination_station_id];
+    const routeTrips = mappedTrips.filter((trip) => trip.route_code === route.code);
+    return {
+      id: route.id,
+      code: route.code,
+      origin_name: formatStationName(origin?.name),
+      destination_name: formatStationName(destination?.name),
+      duration_minutes: route.duration_minutes,
+      base_price: Number(route.base_price),
+      trips_today: routeTrips.length,
+      bookings_today: 0,
+      revenue_today: 0,
+    };
+  });
+
+  return {
+    date,
+    summary: {
+      trips: mappedTrips.length,
+      bookings: 0,
+      passengers: 0,
+      revenue: 0,
+      routes: routeRows.length,
+      vehicles: 0,
+    },
+    trips: mappedTrips,
+    routes: routeRows,
+    recent_bookings: [],
+    status_totals: mappedTrips.reduce((totals, trip) => {
+      totals[trip.status] = (totals[trip.status] || 0) + 1;
+      return totals;
+    }, {}),
+    isAggregateFallback: true,
+  };
+}
+
+export async function fetchDispatcherOverview(date) {
+  const dashboardDate = toDateOnly(date);
+  const { data, error } = await supabase.rpc("dispatcher_dashboard_overview", {
+    p_date: dashboardDate,
+  });
+
+  if (!error && data) {
+    return { ...data, isAggregateFallback: false };
+  }
+
+  if (error?.code !== "42883" && error?.code !== "PGRST202") {
+    throw error;
+  }
+
+  return fetchPublicDispatcherOverview(dashboardDate);
+}
