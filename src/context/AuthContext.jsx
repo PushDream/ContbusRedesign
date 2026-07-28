@@ -66,6 +66,7 @@ export function AuthProvider({ children }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!nextSession && _event !== "SIGNED_OUT" && _event !== "USER_DELETED") return;
       setSession(nextSession);
       setProfile(null);
     });
