@@ -85,7 +85,6 @@ export function AuthProvider({ children }) {
           return;
         }
         if (error) {
-          console.error("Supabase OAuth session error", error.message);
           const fallbackSession = buildSessionFromHash(hashParams);
           if (fallbackSession) {
             window.localStorage.setItem(getSupabaseStorageKey(), JSON.stringify(fallbackSession));
@@ -94,6 +93,7 @@ export function AuthProvider({ children }) {
             setLoadingAuth(false);
             return;
           }
+          console.error("Supabase OAuth session error", error.message);
         }
       }
 
