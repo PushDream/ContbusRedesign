@@ -15,7 +15,6 @@ export default function Header({
     { to: "/", label: t.navHome, end: true },
     { to: "/results", label: t.nav[1] },
     { to: "/moje-bilety", label: t.quickNavMyTickets },
-    { to: "/driver", label: t.driverNav },
     { to: "/kontakt", label: t.nav[5] },
   ];
 

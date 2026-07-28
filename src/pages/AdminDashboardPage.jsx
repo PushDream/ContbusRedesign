@@ -14,7 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { fetchDispatcherOverview } from "../lib/database.js";
-import { supabase } from "../lib/supabase.js";
+import { isSupabaseConfigured, supabase } from "../lib/supabase.js";
 
 const statusLabels = {
   scheduled: "Planowany",
@@ -78,6 +78,18 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     let active = true;
 
+    if (!isSupabaseConfigured) {
+      queueMicrotask(() => {
+        if (!active) return;
+        setAuthError("Supabase is not configured for this deployment.");
+        setAuthChecking(false);
+        setLoading(false);
+      });
+      return () => {
+        active = false;
+      };
+    }
+
     supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
       setSession(data.session);
@@ -100,6 +112,17 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     let active = true;
+
+    if (!isSupabaseConfigured) {
+      queueMicrotask(() => {
+        if (!active) return;
+        setProfile(null);
+        setLoading(false);
+      });
+      return () => {
+        active = false;
+      };
+    }
 
     if (!session) {
       queueMicrotask(() => {
@@ -180,6 +203,10 @@ export default function AdminDashboardPage() {
 
   const handleSignIn = async (event) => {
     event.preventDefault();
+    if (!isSupabaseConfigured) {
+      setAuthError("Supabase is not configured for this deployment.");
+      return;
+    }
     setSigningIn(true);
     setAuthError("");
     const { error } = await supabase.auth.signInWithPassword(credentials);
@@ -190,6 +217,7 @@ export default function AdminDashboardPage() {
   };
 
   const handleSignOut = () => {
+    if (!isSupabaseConfigured) return;
     supabase.auth.signOut();
   };
 

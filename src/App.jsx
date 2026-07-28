@@ -6,7 +6,6 @@ import ResultsPage from "./pages/ResultsPage.jsx";
 import BookingPage from "./pages/BookingPage.jsx";
 import MyTicketsPage from "./pages/MyTicketsPage.jsx";
 import ContactPage from "./pages/ContactPage.jsx";
-import DriverAppPage from "./pages/DriverAppPage.jsx";
 import AdminDashboardPage from "./pages/AdminDashboardPage.jsx";
 
 export default function App() {
@@ -19,7 +18,6 @@ export default function App() {
             <Route path="/results" element={<ResultsPage />} />
             <Route path="/booking" element={<BookingPage />} />
             <Route path="/moje-bilety" element={<MyTicketsPage />} />
-            <Route path="/driver" element={<DriverAppPage />} />
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/kontakt" element={<ContactPage />} />
           </Route>

@@ -1,5 +1,5 @@
-import { fares } from "../data/content.js";
-import { supabase } from "./supabase.js";
+import { departureTimes, estimateArrival, fares, getPlatform, hashString, seededRandom } from "../data/content.js";
+import { isSupabaseConfigured, supabase } from "./supabase.js";
 
 const stationCodeByName = {
   Lublin: "LUB-DWORCOWA",
@@ -59,6 +59,39 @@ function mapDbDeparture({ trip, route, origin, destination }) {
   };
 }
 
+function fallbackSeatsLeft(fareId, time) {
+  const rng = seededRandom(hashString(`${fareId}-${time}-seats`));
+  return 3 + Math.floor(rng() * 20);
+}
+
+function fallbackDepartures({ from, to }) {
+  const fare = fares.find(
+    (item) => item.from.toLowerCase() === from.toLowerCase() && item.to.toLowerCase() === to.toLowerCase(),
+  );
+
+  if (!fare) return [];
+
+  return departureTimes.map((time, index) => ({
+    id: `${fare.id}-${time}`,
+    tripId: "",
+    routeId: "",
+    fareId: fare.id,
+    from,
+    to,
+    departureTime: time,
+    arrivalTime: estimateArrival(time),
+    duration: fare.duration,
+    durationMinutes: fare.durationMinutes,
+    price: fare.price,
+    platform: getPlatform(from, to, time),
+    capacity: fallbackSeatsLeft(fare.id, time),
+    status: "scheduled",
+    note: fare.note,
+    departureIndex: index,
+    isFallback: true,
+  }));
+}
+
 export async function fetchDepartures({ from, to, date }) {
   const originCode = stationCodeByName[from];
   const destinationCode = stationCodeByName[to];
@@ -66,6 +99,10 @@ export async function fetchDepartures({ from, to, date }) {
 
   if (!originCode || !destinationCode || originCode === destinationCode) {
     return [];
+  }
+
+  if (!isSupabaseConfigured) {
+    return fallbackDepartures({ from, to });
   }
 
   const [
@@ -121,6 +158,10 @@ export async function createBookingRecord({
   extras,
   paymentMethod,
 }) {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+
   if (!tripId) {
     throw new Error("Selected departure is missing a Supabase trip id.");
   }
@@ -178,6 +219,10 @@ function mapPublicTrip({ trip, routeById, stationById }) {
 }
 
 async function fetchPublicDispatcherOverview(date) {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+
   const [
     { data: stations, error: stationsError },
     { data: routes, error: routesError },
@@ -240,6 +285,10 @@ async function fetchPublicDispatcherOverview(date) {
 }
 
 export async function fetchDispatcherOverview(date) {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+
   const dashboardDate = toDateOnly(date);
   const { data, error } = await supabase.rpc("dispatcher_dashboard_overview", {
     p_date: dashboardDate,
