@@ -69,6 +69,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [authChecking, setAuthChecking] = useState(true);
+  const [profileChecking, setProfileChecking] = useState(false);
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [authError, setAuthError] = useState("");
@@ -117,6 +118,7 @@ export default function AdminDashboardPage() {
       queueMicrotask(() => {
         if (!active) return;
         setProfile(null);
+        setProfileChecking(false);
         setLoading(false);
       });
       return () => {
@@ -128,6 +130,7 @@ export default function AdminDashboardPage() {
       queueMicrotask(() => {
         if (!active) return;
         setProfile(null);
+        setProfileChecking(false);
         setLoading(false);
       });
       return () => {
@@ -135,6 +138,9 @@ export default function AdminDashboardPage() {
       };
     }
 
+    queueMicrotask(() => {
+      if (active) setProfileChecking(true);
+    });
     supabase
       .from("profiles")
       .select("role, full_name")
@@ -146,7 +152,7 @@ export default function AdminDashboardPage() {
         setAuthError(error ? "Nie udało się sprawdzić uprawnień konta." : "");
       })
       .finally(() => {
-        if (active) setAuthChecking(false);
+        if (active) setProfileChecking(false);
       });
 
     return () => {
@@ -234,7 +240,7 @@ export default function AdminDashboardPage() {
     [trips],
   );
 
-  if (authChecking) {
+  if (authChecking || profileChecking) {
     return (
       <div className="admin-auth-page">
         <div className="admin-auth-card">
