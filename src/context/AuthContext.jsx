@@ -21,11 +21,26 @@ export function AuthProvider({ children }) {
       };
     }
 
-    supabase.auth.getSession().then(({ data }) => {
+    async function loadSession() {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
+
+      if (accessToken && refreshToken) {
+        await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+      }
+
+      const { data } = await supabase.auth.getSession();
       if (!active) return;
       setSession(data.session);
       setLoadingAuth(false);
-    });
+    }
+
+    loadSession();
 
     const {
       data: { subscription },
