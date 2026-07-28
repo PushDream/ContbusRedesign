@@ -1773,15 +1773,12 @@ h3 {
   opacity: 0.72;
 }
 
-.account-google-button span {
+.account-google-button svg {
   display: grid;
   place-items: center;
   width: 24px;
   height: 24px;
-  color: #ffffff;
-  background: #4285f4;
-  border-radius: 50%;
-  font-size: 0.84rem;
+  flex: 0 0 auto;
 }
 
 .account-divider {
