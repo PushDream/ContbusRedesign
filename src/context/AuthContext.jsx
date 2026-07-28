@@ -26,9 +26,15 @@ export function AuthProvider({ children }) {
       const code = url.searchParams.get("code");
 
       if (code) {
-        await supabase.auth.exchangeCodeForSession(code);
+        const { data } = await supabase.auth.exchangeCodeForSession(code);
         url.searchParams.delete("code");
         window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+        if (!active) return;
+        if (data.session) {
+          setSession(data.session);
+          setLoadingAuth(false);
+          return;
+        }
       }
 
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
@@ -36,11 +42,17 @@ export function AuthProvider({ children }) {
       const refreshToken = hashParams.get("refresh_token");
 
       if (accessToken && refreshToken) {
-        await supabase.auth.setSession({
+        const { data } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
         });
         window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+        if (!active) return;
+        if (data.session) {
+          setSession(data.session);
+          setLoadingAuth(false);
+          return;
+        }
       }
 
       const { data } = await supabase.auth.getSession();
