@@ -22,6 +22,15 @@ export function AuthProvider({ children }) {
     }
 
     async function loadSession() {
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("code");
+
+      if (code) {
+        await supabase.auth.exchangeCodeForSession(code);
+        url.searchParams.delete("code");
+        window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+      }
+
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
       const accessToken = hashParams.get("access_token");
       const refreshToken = hashParams.get("refresh_token");
