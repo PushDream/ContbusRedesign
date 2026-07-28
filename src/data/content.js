@@ -45,6 +45,16 @@ export const fares = [
     note: "transfer lotniskowy",
     stops: ["Chopin", "Warszawa Marriott", "Modlin"],
   },
+  {
+    id: "warszawa-modlin",
+    from: "Warszawa Marriott",
+    to: "Lotnisko Modlin",
+    price: 45,
+    duration: "1h",
+    durationMinutes: 60,
+    note: "transfer do Modlina",
+    stops: ["Warszawa Marriott", "Modlin terminal"],
+  },
 ];
 
 export const stops = [

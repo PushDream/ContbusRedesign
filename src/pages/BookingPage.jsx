@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useApp } from "../context/AppContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
+import { createBookingRecord, resolveDeparture } from "../lib/database.js";
 import {
   buildSeatMap,
   estimateArrival,
@@ -34,7 +35,7 @@ const PAYMENT_METHODS = [
 ];
 
 const EXTRAS = [
-  { id: "luggage", label: "Dodatkowa walizka", price: 15, Icon: Briefcase },
+  { id: "luggage", label: "Dodatkowa walizka", price: 12, Icon: Briefcase },
   { id: "insurance", label: "Ubezpieczenie podróży", price: 8, Icon: ShieldCheck },
 ];
 
@@ -47,6 +48,14 @@ function genBookingCode(seed) {
     code += chars[rng % chars.length];
   }
   return code;
+}
+
+function getTodayDate() {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function autoAssignSeats(fareId, chosen, needed) {
@@ -67,14 +76,16 @@ export default function BookingPage() {
 
   const from = searchParams.get("from") || "Lublin";
   const to = searchParams.get("to") || "Warszawa Marriott";
-  const date = searchParams.get("date") || new Date().toISOString().slice(0, 10);
+  const date = searchParams.get("date") || getTodayDate();
   const departure = searchParams.get("departure") || "08:15";
   const passengers = Number(searchParams.get("passengers") || 1);
   const fareId = searchParams.get("fareId") || "lublin-warszawa";
+  const tripId = searchParams.get("tripId") || "";
 
   const fare = fares.find((f) => f.id === fareId) || fares[0];
-  const arrival = estimateArrival(departure);
-  const platform = getPlatform(from, to, departure);
+  const routePrice = Number(searchParams.get("price")) || fare.price;
+  const arrival = searchParams.get("arrival") || estimateArrival(departure);
+  const platform = searchParams.get("platform") || getPlatform(from, to, departure);
 
   const bookingCode = useMemo(
     () => genBookingCode(hashString(`${fareId}-${departure}-${date}`)),
@@ -95,6 +106,8 @@ export default function BookingPage() {
   // Step 3 — payment
   const [paymentMethod, setPaymentMethod] = useState("blik");
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [databaseBooking, setDatabaseBooking] = useState(null);
 
   const effectiveSeats = useMemo(
     () => autoAssignSeats(fare.id, selectedSeats, passengers),
@@ -102,9 +115,12 @@ export default function BookingPage() {
   );
 
   const extrasTotal = EXTRAS.reduce((sum, e) => sum + (extras[e.id] ? e.price : 0), 0);
-  const baseTotal = fare.price * passengers;
-  const fee = 2;
+  const baseTotal = routePrice * passengers;
+  const fee = 0;
   const total = baseTotal + extrasTotal + fee;
+  const paidTotal = Number(databaseBooking?.total_amount || total);
+  const displayBookingCode = databaseBooking?.booking_reference || bookingCode;
+  const ticketCode = databaseBooking?.ticket_code || displayBookingCode;
 
   const updateBuyer = (field, value) => setBuyer((b) => ({ ...b, [field]: value }));
 
@@ -133,13 +149,34 @@ export default function BookingPage() {
     });
   };
 
-  const confirmPayment = () => {
-    setStep(4);
-    notify(t.toastBookingReady, "success");
+  const confirmPayment = async () => {
+    setSubmitting(true);
+    try {
+      const selectedDeparture =
+        tripId ||
+        (await resolveDeparture({ from, to, date, departureTime: departure }))?.tripId;
+
+      const booking = await createBookingRecord({
+        tripId: selectedDeparture,
+        buyer,
+        passengerCount: passengers,
+        seatNumber: effectiveSeats[0],
+        extras,
+        paymentMethod,
+      });
+
+      setDatabaseBooking(booking);
+      setStep(4);
+      notify(t.toastBookingReady, "success");
+    } catch (error) {
+      notify(error.message || "Nie udało się zapisać rezerwacji.", "error");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const ticketPayload = JSON.stringify({
-    code: bookingCode,
+    code: ticketCode,
     route: `${from} → ${to}`,
     date,
     time: departure,
@@ -151,7 +188,7 @@ export default function BookingPage() {
     setDownloadingPdf(true);
     try {
       await downloadTicketPdf({
-        bookingCode,
+        bookingCode: displayBookingCode,
         from,
         to,
         date: new Date(date + "T00:00:00").toLocaleDateString("pl-PL"),
@@ -160,7 +197,7 @@ export default function BookingPage() {
         passengerName: `${buyer.firstName} ${buyer.lastName}`,
         seats: effectiveSeats.join(", "),
         passengers,
-        price: `${total} zł`,
+        price: `${paidTotal} zł`,
         payload: ticketPayload,
         logoUrl,
         labels: {
@@ -362,7 +399,7 @@ export default function BookingPage() {
                     Bilet {from} → {to}
                   </span>
                   <strong>
-                    {fare.price} zł × {passengers}
+                    {routePrice} zł × {passengers}
                   </strong>
                 </div>
                 {extras.luggage && (
@@ -377,10 +414,12 @@ export default function BookingPage() {
                     <strong>+8 zł</strong>
                   </div>
                 )}
-                <div>
-                  <span>Opłata serwisowa</span>
-                  <strong>{fee} zł</strong>
-                </div>
+                {fee > 0 && (
+                  <div>
+                    <span>Opłata serwisowa</span>
+                    <strong>{fee} zł</strong>
+                  </div>
+                )}
                 <div className="total">
                   <span>{t.total}</span>
                   <strong>{total} zł</strong>
@@ -397,8 +436,8 @@ export default function BookingPage() {
                   <ArrowLeft size={16} />
                   Wróć
                 </button>
-                <button className="primary-button" type="button" onClick={confirmPayment}>
-                  Kup bilet · {total} zł
+                <button className="primary-button" disabled={submitting} type="button" onClick={confirmPayment}>
+                  {submitting ? "Zapisywanie..." : `Kup bilet · ${total} zł`}
                   <ArrowRight size={18} />
                 </button>
               </div>
@@ -413,7 +452,7 @@ export default function BookingPage() {
               </div>
               <h2>{t.ticketReadyTitle}</h2>
               <p>
-                Kod rezerwacji <strong>{bookingCode}</strong> wysłany na{" "}
+                Kod rezerwacji <strong>{displayBookingCode}</strong> wysłany na{" "}
                 <strong>{buyer.email}</strong>. Miejsca: {effectiveSeats.join(", ")}.
               </p>
 
@@ -457,7 +496,7 @@ export default function BookingPage() {
             <div className="mobile-ticket">
               <div className="mobile-ticket-top">
                 <img src={logoUrl} alt="Contbus" />
-                <span>{bookingCode}</span>
+                <span>{displayBookingCode}</span>
               </div>
               <div className="mobile-ticket-route">
                 <div>
@@ -473,7 +512,7 @@ export default function BookingPage() {
               <div className="qr-ticket">
                 <QRCodeSVG bgColor="transparent" fgColor="#ffffff" size={72} value={ticketPayload} />
                 <span>
-                  {passengers} {t.passengerUnit} / {fare.price} zł
+                  {passengers} {t.passengerUnit} / {routePrice} zł
                 </span>
               </div>
             </div>
@@ -498,7 +537,7 @@ export default function BookingPage() {
               <div>
                 <span>Bilet</span>
                 <strong>
-                  {fare.price} zł × {passengers}
+                  {routePrice} zł × {passengers}
                 </strong>
               </div>
               {extrasTotal > 0 && (
@@ -507,10 +546,12 @@ export default function BookingPage() {
                   <strong>+{extrasTotal} zł</strong>
                 </div>
               )}
-              <div>
-                <span>Opłata serwisowa</span>
-                <strong>{fee} zł</strong>
-              </div>
+              {fee > 0 && (
+                <div>
+                  <span>Opłata serwisowa</span>
+                  <strong>{fee} zł</strong>
+                </div>
+              )}
               <div className="total">
                 <span>{t.total}</span>
                 <strong>{total} zł</strong>

@@ -1,25 +1,16 @@
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Clock, MapPin, Users } from "lucide-react";
 import { useApp } from "../context/AppContext.jsx";
-import { estimateArrival, fares, getPlatform, hashString, seededRandom } from "../data/content.js";
+import { fares } from "../data/content.js";
+import { fetchDepartures } from "../lib/database.js";
 
-const DEPARTURES = [
-  { time: "06:40" },
-  { time: "08:15" },
-  { time: "09:50" },
-  { time: "11:30" },
-  { time: "13:00" },
-  { time: "14:10" },
-  { time: "15:45" },
-  { time: "16:45" },
-  { time: "18:20" },
-  { time: "19:20" },
-  { time: "21:50" },
-];
-
-function getSeatsLeft(fareId, time) {
-  const rng = seededRandom(hashString(`${fareId}-${time}-seats`));
-  return 3 + Math.floor(rng() * 20);
+function getTodayDate() {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export default function ResultsPage() {
@@ -29,8 +20,11 @@ export default function ResultsPage() {
 
   const from = searchParams.get("from") || "Lublin";
   const to = searchParams.get("to") || "Warszawa Marriott";
-  const date = searchParams.get("date") || new Date().toISOString().slice(0, 10);
+  const date = searchParams.get("date") || getTodayDate();
   const passengers = Number(searchParams.get("passengers") || 1);
+  const [departures, setDepartures] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const matchedFare =
     fares.find(
@@ -39,10 +33,43 @@ export default function ResultsPage() {
         f.to.toLowerCase() === to.toLowerCase(),
     ) || fares[0];
 
-  const handleBook = (depTime) => {
-    navigate(
-      `/booking?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&date=${date}&departure=${encodeURIComponent(depTime)}&passengers=${passengers}&fareId=${matchedFare.id}`,
-    );
+  useEffect(() => {
+    let active = true;
+
+    fetchDepartures({ from, to, date })
+      .then((items) => {
+        if (!active) return;
+        setDepartures(items);
+        setErrorMessage("");
+      })
+      .catch((error) => {
+        if (!active) return;
+        setDepartures([]);
+        setErrorMessage(error.message || "Nie udało się pobrać kursów.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [date, from, to]);
+
+  const handleBook = (departure) => {
+    const params = new URLSearchParams({
+      from,
+      to,
+      date,
+      departure: departure.departureTime,
+      passengers: String(passengers),
+      fareId: departure.fareId || matchedFare.id,
+      tripId: departure.tripId,
+      arrival: departure.arrivalTime,
+      price: String(departure.price),
+      platform: departure.platform || "",
+    });
+    navigate(`/booking?${params.toString()}`);
   };
 
   const [dateFormatted] = (() => {
@@ -83,35 +110,51 @@ export default function ResultsPage() {
       </div>
 
       <div className="results-list">
-        {DEPARTURES.map((dep) => {
-          const arrival = estimateArrival(dep.time);
-          const seats = getSeatsLeft(matchedFare.id, dep.time);
-          const totalPrice = matchedFare.price * passengers;
-          const platform = getPlatform(from, to, dep.time);
+        {!loading && errorMessage && (
+          <div className="secure-box manage-empty">
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {!loading && !errorMessage && departures.length === 0 && (
+          <div className="secure-box manage-empty">
+            <span>Brak kursów dla wybranej trasy i daty.</span>
+          </div>
+        )}
+
+        {loading && (
+          <div className="secure-box manage-empty">
+            <span>Ładowanie kursów z bazy...</span>
+          </div>
+        )}
+
+        {departures.map((departure) => {
+          const seats = departure.capacity;
+          const totalPrice = departure.price * passengers;
 
           return (
-            <article className="result-card" key={dep.time}>
+            <article className="result-card" key={departure.tripId}>
               <div className="result-card-times">
                 <div className="result-time">
-                  <strong>{dep.time}</strong>
+                  <strong>{departure.departureTime}</strong>
                   <span>{from}</span>
-                  {platform && <span className="result-platform">{platform}</span>}
+                  {departure.platform && <span className="result-platform">{departure.platform}</span>}
                 </div>
                 <div className="result-duration">
                   <div className="result-duration-line" />
-                  <span>{matchedFare.duration}</span>
+                  <span>{departure.duration}</span>
                 </div>
                 <div className="result-time result-time-right">
-                  <strong>{arrival}</strong>
+                  <strong>{departure.arrivalTime}</strong>
                   <span>{to}</span>
                 </div>
               </div>
 
               <div className="result-card-meta">
                 <span className={seats <= 5 ? "seats-low" : "seats-ok"}>
-                  {seats} {t.seatsLeft}
+                  {seats} miejsc
                 </span>
-                <span className="result-note">{matchedFare.note}</span>
+                <span className="result-note">{departure.note}</span>
               </div>
 
               <div className="result-card-action">
@@ -119,11 +162,11 @@ export default function ResultsPage() {
                   <strong>{totalPrice} zł</strong>
                   {passengers > 1 && (
                     <small>
-                      {matchedFare.price} zł / {t.passengerUnit}
+                      {departure.price} zł / {t.passengerUnit}
                     </small>
                   )}
                 </div>
-                <button className="primary-button" onClick={() => handleBook(dep.time)} type="button">
+                <button className="primary-button" onClick={() => handleBook(departure)} type="button">
                   Kup bilet
                   <ArrowRight size={16} />
                 </button>
