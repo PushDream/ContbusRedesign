@@ -9,7 +9,6 @@ import MyTicketsPage from "./pages/MyTicketsPage.jsx";
 import ContactPage from "./pages/ContactPage.jsx";
 import AdminDashboardPage from "./pages/AdminDashboardPage.jsx";
 import AccountPage from "./pages/AccountPage.jsx";
-import DriverAppPage from "./pages/DriverAppPage.jsx";
 
 export default function App() {
   return (
@@ -24,7 +23,6 @@ export default function App() {
               <Route path="/moje-bilety" element={<MyTicketsPage />} />
               <Route path="/konto" element={<AccountPage />} />
               <Route path="/admin" element={<AdminDashboardPage />} />
-              <Route path="/driver" element={<DriverAppPage />} />
               <Route path="/kontakt" element={<ContactPage />} />
             </Route>
           </Routes>
