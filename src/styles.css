@@ -3967,6 +3967,33 @@ a.contact-big-value:hover {
   align-items: start;
 }
 
+.driver-date-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 0 0 20px;
+}
+
+.driver-date-toolbar label {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 12px;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.driver-date-toolbar input {
+  color: var(--text-strong);
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
 .driver-trips,
 .driver-trip-header,
 .driver-metrics article,
@@ -4037,6 +4064,11 @@ a.contact-big-value:hover {
   height: 10px;
   background: var(--text-muted);
   border-radius: 50%;
+}
+
+.driver-status-dot.scheduled,
+.driver-status-dot.preparing {
+  background: var(--text-muted);
 }
 
 .driver-status-dot.boarding,
@@ -4191,6 +4223,13 @@ a.contact-big-value:hover {
 .driver-manifest {
   display: grid;
   gap: 10px;
+}
+
+.driver-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 800;
 }
 
 .manifest-row {
