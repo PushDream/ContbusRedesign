@@ -202,11 +202,11 @@ export async function createTicketPdf(ticket, assets = {}) {
 
   doc.setFillColor(...WHITE);
   doc.setDrawColor(...BORDER);
-  doc.roundedRect(64, 107, 33, 33, 4, 4, "FD");
-  doc.addImage(qrDataUrl, "PNG", 67, 110, 27, 27);
+  doc.roundedRect(61, 105, 39, 39, 4, 4, "FD");
+  doc.addImage(qrDataUrl, "PNG", 64.5, 108.5, 32, 32);
 
   setFont("normal", 7.2, MUTED);
-  doc.text(doc.splitTextToSize(labels.footer, 36).slice(0, 2), 62, 149);
+  doc.text(doc.splitTextToSize(labels.footer, 40).slice(0, 2), 61, 153);
 
   detail(labels.seats, seats || "-", 17, 162, 28);
   detail(labels.passengers, passengers, 49, 162, 22);

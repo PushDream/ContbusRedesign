@@ -187,7 +187,7 @@ export default function MyTicketsPage() {
             </div>
 
             <div className="ticket-card-qr">
-              <TicketQr value={ticket.code} size={100} />
+              <TicketQr value={ticket.code} size={140} />
             </div>
 
             {cancelled ? (
