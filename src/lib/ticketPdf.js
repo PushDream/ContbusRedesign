@@ -90,7 +90,7 @@ export async function createTicketPdf(ticket, assets = {}) {
   ]);
 
   const qrDataUrl = await QRCode.toDataURL(payload, {
-    margin: 0,
+    margin: 2,
     width: 320,
     color: { dark: "#0f172a", light: "#ffffff" },
   });

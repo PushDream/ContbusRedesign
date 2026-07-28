@@ -64,12 +64,7 @@ export default function ManageBooking({ t }) {
         seats: "-",
         passengers: 1,
         price: fare ? `${fare.price} zł` : "-",
-        payload: JSON.stringify({
-          code: booking.code,
-          route: `${booking.from} -> ${booking.to}`,
-          time: booking.time,
-          email: booking.email,
-        }),
+        payload: booking.code,
         logoUrl,
         labels: {
           bookingCode: t.manageCode,

@@ -1005,8 +1005,10 @@ h3 {
 }
 
 .qr-ticket svg {
+  display: block;
   flex: 0 0 auto;
-  color: #ffffff;
+  background: #ffffff;
+  border-radius: 6px;
 }
 
 .stops-layout {
@@ -1162,7 +1164,7 @@ h3 {
   line-height: 1.65;
 }
 
-.ticket-card {
+.service-inner .ticket-card {
   grid-template-columns: 96px 1fr;
   align-items: center;
 }
@@ -2254,7 +2256,7 @@ h3 {
     min-height: 300px;
   }
 
-  .ticket-card {
+  .service-inner .ticket-card {
     grid-template-columns: 1fr;
   }
 
@@ -3663,6 +3665,7 @@ h3 {
 .ticket-card {
   display: grid;
   gap: 20px;
+  grid-template-columns: 1fr;
   padding: 24px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
@@ -3749,6 +3752,12 @@ h3 {
 .ticket-card-qr {
   display: flex;
   justify-content: center;
+}
+
+.ticket-card-qr svg {
+  display: block;
+  background: #ffffff;
+  border-radius: 8px;
 }
 
 /* ============================================================

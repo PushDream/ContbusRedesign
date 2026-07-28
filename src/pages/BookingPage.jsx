@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { QRCodeSVG } from "qrcode.react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -27,6 +26,7 @@ import {
   logoUrl,
 } from "../data/content.js";
 import SeatMap from "../components/SeatMap.jsx";
+import TicketQr from "../components/TicketQr.jsx";
 import { downloadTicketPdf } from "../lib/ticketPdf.js";
 
 const PAYMENT_METHODS = [
@@ -201,14 +201,7 @@ export default function BookingPage() {
     }
   };
 
-  const ticketPayload = JSON.stringify({
-    code: ticketCode,
-    route: `${from} → ${to}`,
-    date,
-    time: departure,
-    seats: effectiveSeats,
-    passenger: `${buyer.firstName} ${buyer.lastName}`,
-  });
+  const ticketPayload = ticketCode;
 
   const handleDownloadPdf = async () => {
     setDownloadingPdf(true);
@@ -483,7 +476,7 @@ export default function BookingPage() {
               </p>
 
               <div className="qr-real">
-                <QRCodeSVG value={ticketPayload} size={150} bgColor="#ffffff" fgColor="#101827" />
+                <TicketQr value={ticketPayload} size={150} />
               </div>
 
               {platform && (
@@ -536,7 +529,7 @@ export default function BookingPage() {
                 </div>
               </div>
               <div className="qr-ticket">
-                <QRCodeSVG bgColor="transparent" fgColor="#ffffff" size={72} value={ticketPayload} />
+                <TicketQr value={ticketPayload} size={72} />
                 <span>
                   {passengers} {t.passengerUnit} / {routePrice} zł
                 </span>

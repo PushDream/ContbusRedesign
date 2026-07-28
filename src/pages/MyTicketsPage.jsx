@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { useApp } from "../context/AppContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
 import { estimateArrival, fares, getPlatform, hashString, logoUrl } from "../data/content.js";
+import TicketQr from "../components/TicketQr.jsx";
 import { downloadTicketPdf } from "../lib/ticketPdf.js";
 
 const DEMO_CODE = "CB-3ZZTLH";
@@ -78,7 +79,7 @@ export default function MyTicketsPage() {
         seats: ticket.seat,
         passengers: 1,
         price: fare ? `${fare.price} zł` : "-",
-        payload: JSON.stringify({ code: ticket.code, route: `${ticket.from} → ${ticket.to}`, time: ticket.time }),
+        payload: ticket.code,
         logoUrl,
         labels: {
           bookingCode: t.manageCode,
@@ -186,13 +187,7 @@ export default function MyTicketsPage() {
             </div>
 
             <div className="ticket-card-qr">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(ticket.code)}`}
-                alt="QR bilet"
-                width={100}
-                height={100}
-                style={{ borderRadius: 8 }}
-              />
+              <TicketQr value={ticket.code} size={100} />
             </div>
 
             {cancelled ? (

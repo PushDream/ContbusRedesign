@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
 import {
   ArrowRight,
   Briefcase,
@@ -27,6 +26,7 @@ import {
   ticketUrl,
 } from "../data/content.js";
 import SeatMap from "./SeatMap.jsx";
+import TicketQr from "./TicketQr.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
 import { downloadTicketPdf } from "../lib/ticketPdf.js";
 
@@ -89,18 +89,7 @@ export default function TicketSystem({ activeFare, passengers, setActiveFare, se
   const selectedTime = departureTimes[selectedDeparture];
   const arrivalHour = estimateArrival(selectedTime);
 
-  const ticketPayload = useMemo(
-    () =>
-      JSON.stringify({
-        code: bookingCode,
-        route: `${activeFare.from} -> ${activeFare.to}`,
-        date: "2026-07-18",
-        time: selectedTime,
-        seats: effectiveSeats,
-        passenger: buyer.name,
-      }),
-    [bookingCode, activeFare, selectedTime, effectiveSeats, buyer.name],
-  );
+  const ticketPayload = bookingCode;
 
   const updateBuyer = (field, value) => {
     setBuyer((current) => ({ ...current, [field]: value }));
@@ -452,7 +441,7 @@ export default function TicketSystem({ activeFare, passengers, setActiveFare, se
                     .replace("{seats}", effectiveSeats.join(", ") || "-")}
                 </p>
                 <div className="qr-real">
-                  <QRCodeSVG value={ticketPayload} size={140} bgColor="#ffffff" fgColor="#101827" />
+                  <TicketQr value={ticketPayload} size={140} />
                 </div>
                 <div className="download-panel">
                   <label>
@@ -504,12 +493,7 @@ export default function TicketSystem({ activeFare, passengers, setActiveFare, se
                 </div>
               </div>
               <div className="qr-ticket">
-                <QRCodeSVG
-                  bgColor="transparent"
-                  fgColor="#ffffff"
-                  size={72}
-                  value={ticketPayload}
-                />
+                <TicketQr value={ticketPayload} size={72} />
                 <span>
                   {passengers} {t.passengerUnit} / {activeFare.price} zł
                 </span>
