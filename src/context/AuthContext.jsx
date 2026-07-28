@@ -120,6 +120,11 @@ export function AuthProvider({ children }) {
             },
           },
         }),
+      signInWithGoogleToken: (token) =>
+        supabase.auth.signInWithIdToken({
+          provider: "google",
+          token,
+        }),
       signOut: () => supabase.auth.signOut(),
       signUp: async ({ email, fullName, password, phone }) => {
         const result = await supabase.auth.signUp({

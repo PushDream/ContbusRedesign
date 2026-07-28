@@ -1754,31 +1754,25 @@ h3 {
   background: var(--brand);
 }
 
-.account-google-button {
-  display: inline-flex;
-  gap: 10px;
-  align-items: center;
-  justify-content: center;
-  min-height: 48px;
-  color: var(--text-strong);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.account-google-button:disabled {
-  cursor: wait;
-  opacity: 0.72;
-}
-
-.account-google-button svg {
+.account-google-shell {
   display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  flex: 0 0 auto;
+  gap: 8px;
+  justify-items: stretch;
+}
+
+.account-google-host {
+  min-height: 44px;
+}
+
+.account-google-host > div,
+.account-google-host iframe {
+  width: 100% !important;
+}
+
+.account-google-shell span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 800;
 }
 
 .account-divider {
