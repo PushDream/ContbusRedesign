@@ -6,12 +6,15 @@ import {
   CalendarDays,
   CircleDollarSign,
   ClipboardList,
+  Lock,
+  LogOut,
   RefreshCw,
   Route,
   Ticket,
   Users,
 } from "lucide-react";
 import { fetchDispatcherOverview } from "../lib/database.js";
+import { supabase } from "../lib/supabase.js";
 
 const statusLabels = {
   scheduled: "Planowany",
@@ -56,13 +59,82 @@ function MetricCard({ icon: Icon, label, value, hint }) {
   );
 }
 
+function isStaffProfile(profile) {
+  return profile?.role === "dispatcher" || profile?.role === "admin";
+}
+
 export default function AdminDashboardPage() {
   const [date, setDate] = useState(getTodayDate());
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [authChecking, setAuthChecking] = useState(true);
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [authError, setAuthError] = useState("");
+  const [credentials, setCredentials] = useState({ email: "", password: "" });
+  const [signingIn, setSigningIn] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setSession(data.session);
+      setAuthChecking(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setProfile(null);
+      setOverview(null);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!session) {
+      queueMicrotask(() => {
+        if (!active) return;
+        setProfile(null);
+        setLoading(false);
+      });
+      return () => {
+        active = false;
+      };
+    }
+
+    supabase
+      .from("profiles")
+      .select("role, full_name")
+      .eq("id", session.user.id)
+      .single()
+      .then(({ data, error }) => {
+        if (!active) return;
+        setProfile(error ? null : data);
+        setAuthError(error ? "Nie udało się sprawdzić uprawnień konta." : "");
+      })
+      .finally(() => {
+        if (active) setAuthChecking(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [session]);
+
+  const staff = isStaffProfile(profile);
 
   const loadDashboard = useCallback(async () => {
+    if (!staff) return;
     setLoading(true);
     setErrorMessage("");
     try {
@@ -74,10 +146,19 @@ export default function AdminDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [date]);
+  }, [date, staff]);
 
   useEffect(() => {
     let active = true;
+
+    if (!staff) {
+      queueMicrotask(() => {
+        if (active) setLoading(false);
+      });
+      return () => {
+        active = false;
+      };
+    }
 
     fetchDispatcherOverview(date)
       .then((nextOverview) => {
@@ -95,7 +176,22 @@ export default function AdminDashboardPage() {
     return () => {
       active = false;
     };
-  }, [date]);
+  }, [date, staff]);
+
+  const handleSignIn = async (event) => {
+    event.preventDefault();
+    setSigningIn(true);
+    setAuthError("");
+    const { error } = await supabase.auth.signInWithPassword(credentials);
+    if (error) {
+      setAuthError(error.message || "Nie udało się zalogować.");
+    }
+    setSigningIn(false);
+  };
+
+  const handleSignOut = () => {
+    supabase.auth.signOut();
+  };
 
   const summary = overview?.summary || {};
   const trips = useMemo(() => overview?.trips || [], [overview]);
@@ -110,6 +206,71 @@ export default function AdminDashboardPage() {
     [trips],
   );
 
+  if (authChecking) {
+    return (
+      <div className="admin-auth-page">
+        <div className="admin-auth-card">
+          <Lock size={24} />
+          <h1>Sprawdzanie dostępu</h1>
+          <p>Ładowanie sesji dyspozytora.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="admin-auth-page">
+        <form className="admin-auth-card" onSubmit={handleSignIn}>
+          <Lock size={24} />
+          <p className="eyebrow">Contbus Operacje</p>
+          <h1>Panel dyspozytora</h1>
+          <p>Zaloguj się kontem z rolą dispatcher albo admin.</p>
+          <label>
+            <span>Email</span>
+            <input
+              autoComplete="email"
+              type="email"
+              value={credentials.email}
+              onChange={(event) => setCredentials((current) => ({ ...current, email: event.target.value }))}
+            />
+          </label>
+          <label>
+            <span>Hasło</span>
+            <input
+              autoComplete="current-password"
+              type="password"
+              value={credentials.password}
+              onChange={(event) => setCredentials((current) => ({ ...current, password: event.target.value }))}
+            />
+          </label>
+          {authError && <div className="admin-auth-error">{authError}</div>}
+          <button className="primary-button full" disabled={signingIn} type="submit">
+            {signingIn ? "Logowanie..." : "Zaloguj"}
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  if (!staff) {
+    return (
+      <div className="admin-auth-page">
+        <div className="admin-auth-card">
+          <AlertTriangle size={24} />
+          <p className="eyebrow">Brak dostępu</p>
+          <h1>To konto nie jest dyspozytorem</h1>
+          <p>Poproś administratora Supabase o ustawienie roli profilu na dispatcher albo admin.</p>
+          {authError && <div className="admin-auth-error">{authError}</div>}
+          <button className="secondary-button full" onClick={handleSignOut} type="button">
+            <LogOut size={17} />
+            Wyloguj
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="admin-page">
       <section className="admin-hero">
@@ -123,6 +284,7 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="admin-toolbar">
+          <span className="admin-user-chip">{profile.full_name || session.user.email}</span>
           <label>
             <CalendarDays size={17} />
             <input
@@ -138,6 +300,10 @@ export default function AdminDashboardPage() {
           <button className="secondary-button" disabled={loading} onClick={loadDashboard} type="button">
             <RefreshCw size={17} />
             Odśwież
+          </button>
+          <button className="secondary-button" onClick={handleSignOut} type="button">
+            <LogOut size={17} />
+            Wyloguj
           </button>
         </div>
       </section>
