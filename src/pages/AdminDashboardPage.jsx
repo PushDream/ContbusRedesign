@@ -23,30 +23,213 @@ import {
   updateAdminTrip,
 } from "../lib/database.js";
 import { isSupabaseConfigured, supabase } from "../lib/supabase.js";
+import { useApp } from "../context/AppContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
 
-const statusLabels = {
-  scheduled: "Planowany",
-  boarding: "Wsiadanie",
-  departed: "W drodze",
-  delayed: "Opóźniony",
-  arrived: "Zakończony",
-  cancelled: "Anulowany",
+const adminCopy = {
+  pl: {
+    locale: "pl-PL",
+    currency: "zł",
+    supabaseMissing: "Supabase nie jest skonfigurowany dla tego wdrożenia.",
+    permissionsFailed: "Nie udało się sprawdzić uprawnień konta.",
+    dashboardLoadFailed: "Nie udało się pobrać danych dyspozytora.",
+    loginFailed: "Nie udało się zalogować.",
+    tripSaveFailed: "Nie udało się zapisać kursu.",
+    bookingSaveFailed: "Nie udało się zapisać rezerwacji.",
+    roleSaveFailed: "Nie udało się zapisać roli.",
+    bookingStatusSaved: "Status rezerwacji zapisany.",
+    profileRoleSaved: "Rola użytkownika zapisana.",
+    checkingAccessTitle: "Sprawdzanie dostępu",
+    checkingAccessBody: "Ładowanie sesji dyspozytora.",
+    operationsEyebrow: "Contbus Operacje",
+    dashboardTitle: "Panel dyspozytora",
+    loginIntro: "Zaloguj się kontem z rolą dispatcher albo admin.",
+    email: "Email",
+    password: "Hasło",
+    signingIn: "Logowanie...",
+    signIn: "Zaloguj",
+    noAccessEyebrow: "Brak dostępu",
+    noAccessTitle: "To konto nie jest dyspozytorem",
+    noAccessBody: "Poproś administratora Supabase o ustawienie roli profilu na dispatcher albo admin.",
+    logout: "Wyloguj",
+    heroBody:
+      "Dzisiejsze kursy, obłożenie i sprzedaż z tej samej bazy, której używa strona, aplikacja klienta i aplikacja kierowcy.",
+    refresh: "Odśwież",
+    aggregateWarning: "Widok sprzedaży czeka na aktywację agregatów dyspozytora w Supabase.",
+    trips: "Kursy",
+    bookings: "Rezerwacje",
+    passengers: "Pasażerowie",
+    sales: "Sprzedaż",
+    activeRoutes: "Aktywne trasy",
+    vehicles: "Pojazdy",
+    notCancelled: "bez anulowanych",
+    selectedDay: "na wybrany dzień",
+    paidDemo: "demo płatności",
+    staffAuthHint: "po włączeniu dostępu personelu",
+    operations: "Operacje",
+    tripControl: "Sterowanie kursem",
+    dispatcherOps: "Operacje dyspozytora",
+    status: "Status",
+    vehicle: "Pojazd",
+    driver: "Kierowca",
+    platform: "Peron",
+    assignPending: "Do przypisania",
+    platformPlaceholder: "np. Peron 3",
+    tripStatusSaved: "Status kursu zapisany.",
+    vehicleAssigned: "Pojazd przypisany.",
+    driverAssigned: "Kierowca przypisany.",
+    platformSaved: "Peron zapisany.",
+    revenue: "Przychód",
+    incidents: "Incydenty",
+    tripManifest: "Manifest kursu",
+    noBookingsOnTrip: "Brak rezerwacji na tym kursie.",
+    chooseTrip: "Wybierz kurs z listy operacyjnej.",
+    search: "Wyszukiwarka",
+    searchPlaceholder: "Kod, email, nazwisko...",
+    noMatchingBookings: "Brak pasujących rezerwacji.",
+    access: "Dostęp",
+    userRoles: "Role użytkowników",
+    unnamed: "Bez nazwy",
+    today: "Dzisiaj",
+    operationalTrips: "Kursy operacyjne",
+    busiest: "Największe obłożenie:",
+    loadingTrips: "Ładowanie kursów...",
+    noTripsForDate: "Brak kursów dla tej daty.",
+    noPlatform: "Bez peronu",
+    vehicleUnassigned: "Pojazd do przypisania",
+    driverUnassigned: "Kierowca do przypisania",
+    reservationsShort: "rez.",
+    routes: "Trasy",
+    salesByRoute: "Sprzedaż wg tras",
+    routeTrips: "kursy",
+    recentBookings: "Ostatnie rezerwacje",
+    noVisibleBookings: "Brak widocznych rezerwacji.",
+    passengersShort: "pas.",
+    checkedIn: "odprawionych",
+    statusLabels: {
+      scheduled: "Planowany",
+      boarding: "Wsiadanie",
+      departed: "W drodze",
+      delayed: "Opóźniony",
+      arrived: "Zakończony",
+      cancelled: "Anulowany",
+    },
+    bookingStatusLabels: {
+      pending: "Oczekuje",
+      paid: "Opłacona",
+      cancelled: "Anulowana",
+      refunded: "Zwrócona",
+    },
+    roleLabels: {
+      customer: "Klient",
+      driver: "Kierowca",
+      dispatcher: "Dyspozytor",
+      admin: "Admin",
+    },
+  },
+  en: {
+    locale: "en-US",
+    currency: "PLN",
+    supabaseMissing: "Supabase is not configured for this deployment.",
+    permissionsFailed: "Could not check account permissions.",
+    dashboardLoadFailed: "Could not load dispatcher data.",
+    loginFailed: "Could not sign in.",
+    tripSaveFailed: "Could not save the trip.",
+    bookingSaveFailed: "Could not save the booking.",
+    roleSaveFailed: "Could not save the role.",
+    bookingStatusSaved: "Booking status saved.",
+    profileRoleSaved: "User role saved.",
+    checkingAccessTitle: "Checking access",
+    checkingAccessBody: "Loading dispatcher session.",
+    operationsEyebrow: "Contbus Operations",
+    dashboardTitle: "Dispatcher panel",
+    loginIntro: "Sign in with an account that has the dispatcher or admin role.",
+    email: "Email",
+    password: "Password",
+    signingIn: "Signing in...",
+    signIn: "Sign in",
+    noAccessEyebrow: "No access",
+    noAccessTitle: "This account is not a dispatcher",
+    noAccessBody: "Ask the Supabase administrator to set the profile role to dispatcher or admin.",
+    logout: "Sign out",
+    heroBody:
+      "Today's trips, occupancy, and sales from the same database used by the website, customer app, and driver app.",
+    refresh: "Refresh",
+    aggregateWarning: "The sales view is waiting for dispatcher aggregates to be activated in Supabase.",
+    trips: "Trips",
+    bookings: "Bookings",
+    passengers: "Passengers",
+    sales: "Sales",
+    activeRoutes: "Active routes",
+    vehicles: "Vehicles",
+    notCancelled: "excluding cancelled",
+    selectedDay: "for selected day",
+    paidDemo: "paid demo",
+    staffAuthHint: "after staff auth is active",
+    operations: "Operations",
+    tripControl: "Trip control",
+    dispatcherOps: "Dispatcher operations",
+    status: "Status",
+    vehicle: "Vehicle",
+    driver: "Driver",
+    platform: "Platform",
+    assignPending: "Unassigned",
+    platformPlaceholder: "e.g. Platform 3",
+    tripStatusSaved: "Trip status saved.",
+    vehicleAssigned: "Vehicle assigned.",
+    driverAssigned: "Driver assigned.",
+    platformSaved: "Platform saved.",
+    revenue: "Revenue",
+    incidents: "Incidents",
+    tripManifest: "Trip manifest",
+    noBookingsOnTrip: "No bookings on this trip.",
+    chooseTrip: "Choose a trip from the operations list.",
+    search: "Search",
+    searchPlaceholder: "Code, email, surname...",
+    noMatchingBookings: "No matching bookings.",
+    access: "Access",
+    userRoles: "User roles",
+    unnamed: "Unnamed",
+    today: "Today",
+    operationalTrips: "Operational trips",
+    busiest: "Highest occupancy:",
+    loadingTrips: "Loading trips...",
+    noTripsForDate: "No trips for this date.",
+    noPlatform: "No platform",
+    vehicleUnassigned: "Vehicle unassigned",
+    driverUnassigned: "Driver unassigned",
+    reservationsShort: "res.",
+    routes: "Routes",
+    salesByRoute: "Sales by route",
+    routeTrips: "trips",
+    recentBookings: "Recent bookings",
+    noVisibleBookings: "No visible bookings.",
+    passengersShort: "pax",
+    checkedIn: "checked in",
+    statusLabels: {
+      scheduled: "Scheduled",
+      boarding: "Boarding",
+      departed: "En route",
+      delayed: "Delayed",
+      arrived: "Completed",
+      cancelled: "Cancelled",
+    },
+    bookingStatusLabels: {
+      pending: "Pending",
+      paid: "Paid",
+      cancelled: "Cancelled",
+      refunded: "Refunded",
+    },
+    roleLabels: {
+      customer: "Customer",
+      driver: "Driver",
+      dispatcher: "Dispatcher",
+      admin: "Admin",
+    },
+  },
 };
 
-const bookingStatusLabels = {
-  pending: "Oczekuje",
-  paid: "Opłacona",
-  cancelled: "Anulowana",
-  refunded: "Zwrócona",
-};
-
-const roleLabels = {
-  customer: "Klient",
-  driver: "Kierowca",
-  dispatcher: "Dyspozytor",
-  admin: "Admin",
-};
+adminCopy.ua = adminCopy.pl;
 
 function getTodayDate() {
   const date = new Date();
@@ -60,8 +243,8 @@ function timeText(value) {
   return String(value || "").slice(0, 5);
 }
 
-function money(value) {
-  return `${Number(value || 0).toLocaleString("pl-PL")} zł`;
+function money(value, text = adminCopy.pl) {
+  return `${Number(value || 0).toLocaleString(text.locale)} ${text.currency}`;
 }
 
 function occupancy(passengers, capacity) {
@@ -87,6 +270,11 @@ function isStaffProfile(profile) {
 }
 
 export default function AdminDashboardPage() {
+  const { language } = useApp();
+  const text = adminCopy[language] || adminCopy.pl;
+  const statusLabels = text.statusLabels;
+  const bookingStatusLabels = text.bookingStatusLabels;
+  const roleLabels = text.roleLabels;
   const notify = useToast();
   const [date, setDate] = useState(getTodayDate());
   const [overview, setOverview] = useState(null);
@@ -110,7 +298,7 @@ export default function AdminDashboardPage() {
     if (!isSupabaseConfigured) {
       queueMicrotask(() => {
         if (!active) return;
-        setAuthError("Supabase is not configured for this deployment.");
+        setAuthError(text.supabaseMissing);
         setAuthChecking(false);
         setLoading(false);
       });
@@ -137,7 +325,7 @@ export default function AdminDashboardPage() {
       active = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [text.supabaseMissing]);
 
   useEffect(() => {
     let active = true;
@@ -177,7 +365,7 @@ export default function AdminDashboardPage() {
       .then(({ data, error }) => {
         if (!active) return;
         setProfile(error ? null : data);
-        setAuthError(error ? "Nie udało się sprawdzić uprawnień konta." : "");
+        setAuthError(error ? text.permissionsFailed : "");
       })
       .finally(() => {
         if (active) setProfileChecking(false);
@@ -186,7 +374,7 @@ export default function AdminDashboardPage() {
     return () => {
       active = false;
     };
-  }, [session]);
+  }, [session, text.permissionsFailed]);
 
   const staff = isStaffProfile(profile);
 
@@ -208,11 +396,11 @@ export default function AdminDashboardPage() {
     } catch (error) {
       setOverview(null);
       setOperations(null);
-      setErrorMessage(error.message || "Nie udało się pobrać danych dyspozytora.");
+      setErrorMessage(error.message || text.dashboardLoadFailed);
     } finally {
       setLoading(false);
     }
-  }, [date, staff]);
+  }, [date, staff, text.dashboardLoadFailed]);
 
   useEffect(() => {
     let active = true;
@@ -240,7 +428,7 @@ export default function AdminDashboardPage() {
         if (!active) return;
         setOverview(null);
         setOperations(null);
-        setErrorMessage(error.message || "Nie udało się pobrać danych dyspozytora.");
+        setErrorMessage(error.message || text.dashboardLoadFailed);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -249,19 +437,19 @@ export default function AdminDashboardPage() {
     return () => {
       active = false;
     };
-  }, [date, staff]);
+  }, [date, staff, text.dashboardLoadFailed]);
 
   const handleSignIn = async (event) => {
     event.preventDefault();
     if (!isSupabaseConfigured) {
-      setAuthError("Supabase is not configured for this deployment.");
+      setAuthError(text.supabaseMissing);
       return;
     }
     setSigningIn(true);
     setAuthError("");
     const { error } = await supabase.auth.signInWithPassword(credentials);
     if (error) {
-      setAuthError(error.message || "Nie udało się zalogować.");
+      setAuthError(error.message || text.loginFailed);
     }
     setSigningIn(false);
   };
@@ -318,7 +506,7 @@ export default function AdminDashboardPage() {
       await reloadOperations();
       notify(successMessage, "success");
     } catch (error) {
-      notify(error.message || "Nie udało się zapisać kursu.", "error");
+      notify(error.message || text.tripSaveFailed, "error");
     } finally {
       setSavingKey("");
     }
@@ -330,9 +518,9 @@ export default function AdminDashboardPage() {
     try {
       await updateAdminBookingStatus(bookingId, status);
       await reloadOperations();
-      notify("Status rezerwacji zapisany.", "success");
+      notify(text.bookingStatusSaved, "success");
     } catch (error) {
-      notify(error.message || "Nie udało się zapisać rezerwacji.", "error");
+      notify(error.message || text.bookingSaveFailed, "error");
     } finally {
       setSavingKey("");
     }
@@ -344,9 +532,9 @@ export default function AdminDashboardPage() {
     try {
       await updateAdminProfileRole(profileId, role);
       await reloadOperations();
-      notify("Rola użytkownika zapisana.", "success");
+      notify(text.profileRoleSaved, "success");
     } catch (error) {
-      notify(error.message || "Nie udało się zapisać roli.", "error");
+      notify(error.message || text.roleSaveFailed, "error");
     } finally {
       setSavingKey("");
     }
@@ -365,8 +553,8 @@ export default function AdminDashboardPage() {
       <div className="admin-auth-page">
         <div className="admin-auth-card">
           <Lock size={24} />
-          <h1>Sprawdzanie dostępu</h1>
-          <p>Ładowanie sesji dyspozytora.</p>
+          <h1>{text.checkingAccessTitle}</h1>
+          <p>{text.checkingAccessBody}</p>
         </div>
       </div>
     );
@@ -377,11 +565,11 @@ export default function AdminDashboardPage() {
       <div className="admin-auth-page">
         <form className="admin-auth-card" onSubmit={handleSignIn}>
           <Lock size={24} />
-          <p className="eyebrow">Contbus Operacje</p>
-          <h1>Panel dyspozytora</h1>
-          <p>Zaloguj się kontem z rolą dispatcher albo admin.</p>
+          <p className="eyebrow">{text.operationsEyebrow}</p>
+          <h1>{text.dashboardTitle}</h1>
+          <p>{text.loginIntro}</p>
           <label>
-            <span>Email</span>
+            <span>{text.email}</span>
             <input
               autoComplete="email"
               type="email"
@@ -390,7 +578,7 @@ export default function AdminDashboardPage() {
             />
           </label>
           <label>
-            <span>Hasło</span>
+            <span>{text.password}</span>
             <input
               autoComplete="current-password"
               type="password"
@@ -400,7 +588,7 @@ export default function AdminDashboardPage() {
           </label>
           {authError && <div className="admin-auth-error">{authError}</div>}
           <button className="primary-button full" disabled={signingIn} type="submit">
-            {signingIn ? "Logowanie..." : "Zaloguj"}
+            {signingIn ? text.signingIn : text.signIn}
           </button>
         </form>
       </div>
@@ -412,13 +600,13 @@ export default function AdminDashboardPage() {
       <div className="admin-auth-page">
         <div className="admin-auth-card">
           <AlertTriangle size={24} />
-          <p className="eyebrow">Brak dostępu</p>
-          <h1>To konto nie jest dyspozytorem</h1>
-          <p>Poproś administratora Supabase o ustawienie roli profilu na dispatcher albo admin.</p>
+          <p className="eyebrow">{text.noAccessEyebrow}</p>
+          <h1>{text.noAccessTitle}</h1>
+          <p>{text.noAccessBody}</p>
           {authError && <div className="admin-auth-error">{authError}</div>}
           <button className="secondary-button full" onClick={handleSignOut} type="button">
             <LogOut size={17} />
-            Wyloguj
+            {text.logout}
           </button>
         </div>
       </div>
@@ -429,12 +617,9 @@ export default function AdminDashboardPage() {
     <div className="admin-page">
       <section className="admin-hero">
         <div>
-          <p className="eyebrow">Contbus Operacje</p>
-          <h1>Panel dyspozytora</h1>
-          <p>
-            Dzisiejsze kursy, obłożenie i sprzedaż z tej samej bazy, której używa strona,
-            aplikacja klienta i aplikacja kierowcy.
-          </p>
+          <p className="eyebrow">{text.operationsEyebrow}</p>
+          <h1>{text.dashboardTitle}</h1>
+          <p>{text.heroBody}</p>
         </div>
 
         <div className="admin-toolbar">
@@ -453,11 +638,11 @@ export default function AdminDashboardPage() {
           </label>
           <button className="secondary-button" disabled={loading} onClick={loadDashboard} type="button">
             <RefreshCw size={17} />
-            Odśwież
+            {text.refresh}
           </button>
           <button className="secondary-button" onClick={handleSignOut} type="button">
             <LogOut size={17} />
-            Wyloguj
+            {text.logout}
           </button>
         </div>
       </section>
@@ -465,7 +650,7 @@ export default function AdminDashboardPage() {
       {overview?.isAggregateFallback && (
         <div className="admin-alert">
           <AlertTriangle size={18} />
-          <span>Widok sprzedaży czeka na aktywację agregatów dyspozytora w Supabase.</span>
+          <span>{text.aggregateWarning}</span>
         </div>
       )}
 
@@ -477,20 +662,20 @@ export default function AdminDashboardPage() {
       )}
 
       <section className="admin-metrics-grid">
-        <MetricCard icon={Bus} label="Kursy" value={summary.trips || 0} hint={date} />
-        <MetricCard icon={Ticket} label="Rezerwacje" value={summary.bookings || 0} hint="bez anulowanych" />
-        <MetricCard icon={Users} label="Pasażerowie" value={summary.passengers || 0} hint="na wybrany dzień" />
-        <MetricCard icon={CircleDollarSign} label="Sprzedaż" value={money(summary.revenue)} hint="demo paid" />
-        <MetricCard icon={Route} label="Aktywne trasy" value={summary.routes || routes.length} />
-        <MetricCard icon={ClipboardList} label="Pojazdy" value={summary.vehicles || 0} hint="po aktywacji staff auth" />
+        <MetricCard icon={Bus} label={text.trips} value={summary.trips || 0} hint={date} />
+        <MetricCard icon={Ticket} label={text.bookings} value={summary.bookings || 0} hint={text.notCancelled} />
+        <MetricCard icon={Users} label={text.passengers} value={summary.passengers || 0} hint={text.selectedDay} />
+        <MetricCard icon={CircleDollarSign} label={text.sales} value={money(summary.revenue, text)} hint={text.paidDemo} />
+        <MetricCard icon={Route} label={text.activeRoutes} value={summary.routes || routes.length} />
+        <MetricCard icon={ClipboardList} label={text.vehicles} value={summary.vehicles || 0} hint={text.staffAuthHint} />
       </section>
 
-      <section className="admin-ops-grid" aria-label="Operacje dyspozytora">
+      <section className="admin-ops-grid" aria-label={text.dispatcherOps}>
         <div className="admin-panel">
           <div className="admin-panel-header">
             <div>
-              <p className="eyebrow">Operacje</p>
-              <h2>Sterowanie kursem</h2>
+              <p className="eyebrow">{text.operations}</p>
+              <h2>{text.tripControl}</h2>
             </div>
             <Bus size={18} />
           </div>
@@ -511,12 +696,12 @@ export default function AdminDashboardPage() {
 
               <div className="admin-control-grid">
                 <label>
-                  <span>Status</span>
+                  <span>{text.status}</span>
                   <select
                     disabled={savingKey === `trip-${selectedTrip.id}`}
                     value={selectedTrip.status}
                     onChange={(event) =>
-                      saveTripField(selectedTrip.id, { status: event.target.value }, "Status kursu zapisany.")
+                      saveTripField(selectedTrip.id, { status: event.target.value }, text.tripStatusSaved)
                     }
                   >
                     {Object.entries(statusLabels).map(([value, label]) => (
@@ -528,15 +713,15 @@ export default function AdminDashboardPage() {
                 </label>
 
                 <label>
-                  <span>Pojazd</span>
+                  <span>{text.vehicle}</span>
                   <select
                     disabled={savingKey === `trip-${selectedTrip.id}`}
                     value={selectedTrip.vehicle_id || ""}
                     onChange={(event) =>
-                      saveTripField(selectedTrip.id, { vehicle_id: event.target.value }, "Pojazd przypisany.")
+                      saveTripField(selectedTrip.id, { vehicle_id: event.target.value }, text.vehicleAssigned)
                     }
                   >
-                    <option value="">Do przypisania</option>
+                    <option value="">{text.assignPending}</option>
                     {vehicles.map((vehicle) => (
                       <option key={vehicle.id} value={vehicle.id}>
                         {vehicle.label} · {vehicle.plate_number}
@@ -546,15 +731,15 @@ export default function AdminDashboardPage() {
                 </label>
 
                 <label>
-                  <span>Kierowca</span>
+                  <span>{text.driver}</span>
                   <select
                     disabled={savingKey === `trip-${selectedTrip.id}`}
                     value={selectedTrip.driver_id || ""}
                     onChange={(event) =>
-                      saveTripField(selectedTrip.id, { driver_id: event.target.value }, "Kierowca przypisany.")
+                      saveTripField(selectedTrip.id, { driver_id: event.target.value }, text.driverAssigned)
                     }
                   >
-                    <option value="">Do przypisania</option>
+                    <option value="">{text.assignPending}</option>
                     {drivers.map((driver) => (
                       <option key={driver.id} value={driver.id}>
                         {driver.full_name || driver.phone || driver.id}
@@ -564,48 +749,48 @@ export default function AdminDashboardPage() {
                 </label>
 
                 <label>
-                  <span>Peron</span>
+                  <span>{text.platform}</span>
                   <input
                     defaultValue={selectedTrip.platform || ""}
                     disabled={savingKey === `trip-${selectedTrip.id}`}
                     onBlur={(event) =>
-                      saveTripField(selectedTrip.id, { platform: event.target.value }, "Peron zapisany.")
+                      saveTripField(selectedTrip.id, { platform: event.target.value }, text.platformSaved)
                     }
-                    placeholder="np. Peron 3"
+                    placeholder={text.platformPlaceholder}
                   />
                 </label>
               </div>
 
               <div className="admin-trip-detail-grid">
                 <div>
-                  <span>Rezerwacje</span>
+                  <span>{text.bookings}</span>
                   <strong>{selectedTrip.booking_count || 0}</strong>
                 </div>
                 <div>
-                  <span>Pasażerowie</span>
+                  <span>{text.passengers}</span>
                   <strong>
                     {selectedTrip.passenger_count || 0}/{selectedTrip.capacity}
                   </strong>
                 </div>
                 <div>
-                  <span>Przychód</span>
-                  <strong>{money(selectedTrip.revenue_total)}</strong>
+                  <span>{text.revenue}</span>
+                  <strong>{money(selectedTrip.revenue_total, text)}</strong>
                 </div>
                 <div>
-                  <span>Incydenty</span>
+                  <span>{text.incidents}</span>
                   <strong>{selectedTrip.incidents.length}</strong>
                 </div>
               </div>
 
               <div className="admin-manifest-preview">
-                <h3>Manifest kursu</h3>
-                {selectedTripBookings.length === 0 && <p className="admin-empty">Brak rezerwacji na tym kursie.</p>}
+                <h3>{text.tripManifest}</h3>
+                {selectedTripBookings.length === 0 && <p className="admin-empty">{text.noBookingsOnTrip}</p>}
                 {selectedTripBookings.map((booking) => (
                   <article className="admin-manifest-booking" key={booking.id}>
                     <div>
                       <strong>{booking.booking_reference}</strong>
                       <span>
-                        {booking.buyer_name} · {booking.checked_in_count}/{booking.passengers.length} odprawionych
+                        {booking.buyer_name} · {booking.checked_in_count}/{booking.passengers.length} {text.checkedIn}
                       </span>
                     </div>
                     <select
@@ -632,15 +817,15 @@ export default function AdminDashboardPage() {
               </div>
             </div>
           ) : (
-            <p className="admin-empty">Wybierz kurs z listy operacyjnej.</p>
+            <p className="admin-empty">{text.chooseTrip}</p>
           )}
         </div>
 
         <aside className="admin-panel compact">
           <div className="admin-panel-header">
             <div>
-              <p className="eyebrow">Rezerwacje</p>
-              <h2>Wyszukiwarka</h2>
+              <p className="eyebrow">{text.bookings}</p>
+              <h2>{text.search}</h2>
             </div>
             <Search size={18} />
           </div>
@@ -649,11 +834,11 @@ export default function AdminDashboardPage() {
             <input
               value={bookingQuery}
               onChange={(event) => setBookingQuery(event.target.value)}
-              placeholder="Kod, email, nazwisko..."
+              placeholder={text.searchPlaceholder}
             />
           </label>
           <div className="admin-booking-list operational">
-            {filteredBookings.length === 0 && <p className="admin-empty">Brak pasujących rezerwacji.</p>}
+            {filteredBookings.length === 0 && <p className="admin-empty">{text.noMatchingBookings}</p>}
             {filteredBookings.map((booking) => (
               <article className="admin-booking-card" key={booking.id}>
                 <div>
@@ -665,7 +850,7 @@ export default function AdminDashboardPage() {
                 </div>
                 <div className="admin-booking-card-footer">
                   <span className={`admin-status ${booking.status}`}>{bookingStatusLabels[booking.status]}</span>
-                  <strong>{money(booking.total_amount)}</strong>
+                  <strong>{money(booking.total_amount, text)}</strong>
                 </div>
               </article>
             ))}
@@ -675,8 +860,8 @@ export default function AdminDashboardPage() {
         <aside className="admin-panel compact">
           <div className="admin-panel-header">
             <div>
-              <p className="eyebrow">Dostęp</p>
-              <h2>Role użytkowników</h2>
+              <p className="eyebrow">{text.access}</p>
+              <h2>{text.userRoles}</h2>
             </div>
             <UserCog size={18} />
           </div>
@@ -684,7 +869,7 @@ export default function AdminDashboardPage() {
             {profiles.map((userProfile) => (
               <article className="admin-user-row" key={userProfile.id}>
                 <div>
-                  <strong>{userProfile.full_name || "Bez nazwy"}</strong>
+                  <strong>{userProfile.full_name || text.unnamed}</strong>
                   <span>{userProfile.phone || userProfile.id.slice(0, 8)}</span>
                 </div>
                 <select
@@ -708,19 +893,19 @@ export default function AdminDashboardPage() {
         <div className="admin-panel">
           <div className="admin-panel-header">
             <div>
-              <p className="eyebrow">Dzisiaj</p>
-              <h2>Kursy operacyjne</h2>
+              <p className="eyebrow">{text.today}</p>
+              <h2>{text.operationalTrips}</h2>
             </div>
             {busiestTrip && (
               <span className="admin-chip">
-                Największe obłożenie: {timeText(busiestTrip.departure_time)}
+                {text.busiest} {timeText(busiestTrip.departure_time)}
               </span>
             )}
           </div>
 
           <div className="admin-trip-list">
-            {loading && <p className="admin-empty">Ładowanie kursów...</p>}
-            {!loading && trips.length === 0 && <p className="admin-empty">Brak kursów dla tej daty.</p>}
+            {loading && <p className="admin-empty">{text.loadingTrips}</p>}
+            {!loading && trips.length === 0 && <p className="admin-empty">{text.noTripsForDate}</p>}
 
             {operationalTrips.map((trip) => {
               const load = occupancy(trip.passenger_count, trip.capacity);
@@ -744,9 +929,9 @@ export default function AdminDashboardPage() {
                     </div>
                     <div className="admin-trip-meta">
                       <span>{trip.route_code}</span>
-                      <span>{trip.platform || "Bez peronu"}</span>
-                      <span>{trip.vehicle?.label || "Pojazd do przypisania"}</span>
-                      <span>{trip.driver?.full_name || "Kierowca do przypisania"}</span>
+                      <span>{trip.platform || text.noPlatform}</span>
+                      <span>{trip.vehicle?.label || text.vehicleUnassigned}</span>
+                      <span>{trip.driver?.full_name || text.driverUnassigned}</span>
                     </div>
                     <div className="admin-progress">
                       <span style={{ width: `${load}%` }} />
@@ -757,8 +942,8 @@ export default function AdminDashboardPage() {
                     <strong>
                       {trip.passenger_count || 0}/{trip.capacity}
                     </strong>
-                    <span>{trip.booking_count || 0} rez.</span>
-                    <span>{money(trip.revenue_total)}</span>
+                    <span>{trip.booking_count || 0} {text.reservationsShort}</span>
+                    <span>{money(trip.revenue_total, text)}</span>
                   </div>
                 </article>
               );
@@ -770,8 +955,8 @@ export default function AdminDashboardPage() {
           <div className="admin-panel compact">
             <div className="admin-panel-header">
               <div>
-                <p className="eyebrow">Trasy</p>
-                <h2>Sprzedaż wg tras</h2>
+                <p className="eyebrow">{text.routes}</p>
+                <h2>{text.salesByRoute}</h2>
               </div>
             </div>
             <div className="admin-route-list">
@@ -785,11 +970,11 @@ export default function AdminDashboardPage() {
                   </div>
                   <div>
                     <strong>{route.trips_today || 0}</strong>
-                    <span>kursy</span>
+                    <span>{text.routeTrips}</span>
                   </div>
                   <div>
-                    <strong>{money(route.revenue_today)}</strong>
-                    <span>{route.bookings_today || 0} rez.</span>
+                    <strong>{money(route.revenue_today, text)}</strong>
+                    <span>{route.bookings_today || 0} {text.reservationsShort}</span>
                   </div>
                 </div>
               ))}
@@ -799,13 +984,13 @@ export default function AdminDashboardPage() {
           <div className="admin-panel compact">
             <div className="admin-panel-header">
               <div>
-                <p className="eyebrow">Sprzedaż</p>
-                <h2>Ostatnie rezerwacje</h2>
+                <p className="eyebrow">{text.sales}</p>
+                <h2>{text.recentBookings}</h2>
               </div>
               <Activity size={18} />
             </div>
             <div className="admin-booking-list">
-              {recentBookings.length === 0 && <p className="admin-empty">Brak widocznych rezerwacji.</p>}
+              {recentBookings.length === 0 && <p className="admin-empty">{text.noVisibleBookings}</p>}
               {recentBookings.map((booking) => (
                 <div className="admin-booking-row" key={booking.id}>
                   <div>
@@ -815,8 +1000,8 @@ export default function AdminDashboardPage() {
                     </span>
                   </div>
                   <div>
-                    <strong>{money(booking.total_amount)}</strong>
-                    <span>{booking.passenger_count} pas.</span>
+                    <strong>{money(booking.total_amount, text)}</strong>
+                    <span>{booking.passenger_count} {text.passengersShort}</span>
                   </div>
                 </div>
               ))}
