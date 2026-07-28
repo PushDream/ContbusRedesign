@@ -34,12 +34,13 @@ function prettyDate(value) {
 
 export default function AccountPage() {
   const notify = useToast();
-  const { configured, loadingAuth, profile, session, signIn, signOut, signUp } = useAuth();
+  const { configured, loadingAuth, profile, session, signIn, signInWithGoogle, signOut, signUp } = useAuth();
   const [mode, setMode] = useState("signin");
   const [credentials, setCredentials] = useState(initialCredentials);
   const [authError, setAuthError] = useState("");
   const [authMessage, setAuthMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [socialSubmitting, setSocialSubmitting] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [bookingsError, setBookingsError] = useState("");
   const [loadingBookings, setLoadingBookings] = useState(false);
@@ -132,6 +133,21 @@ export default function AccountPage() {
     setSubmitting(false);
   };
 
+  const handleGoogleSignIn = async () => {
+    if (!configured) {
+      setAuthError("Supabase is not configured for this deployment.");
+      return;
+    }
+
+    setSocialSubmitting(true);
+    setAuthError("");
+    const { error } = await signInWithGoogle();
+    if (error) {
+      setAuthError(error.message || "Nie udało się rozpocząć logowania Google.");
+      setSocialSubmitting(false);
+    }
+  };
+
   const handleSignOut = async () => {
     await signOut();
     notify("Wylogowano", "info");
@@ -172,6 +188,20 @@ export default function AccountPage() {
           <p className="eyebrow">Contbus konto</p>
           <h1>{mode === "signup" ? "Utwórz konto klienta" : "Zaloguj się"}</h1>
           <p>Po zalogowaniu bilety kupione na tym koncie będą widoczne w jednym miejscu.</p>
+
+          <button
+            className="account-google-button"
+            disabled={socialSubmitting}
+            onClick={handleGoogleSignIn}
+            type="button"
+          >
+            <span aria-hidden="true">G</span>
+            {socialSubmitting ? "Przekierowanie..." : "Kontynuuj z Google"}
+          </button>
+
+          <div className="account-divider">
+            <span>albo</span>
+          </div>
 
           <div className="account-tabs" role="tablist" aria-label="Tryb konta">
             <button

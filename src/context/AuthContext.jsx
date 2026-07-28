@@ -73,6 +73,16 @@ export function AuthProvider({ children }) {
       profile,
       session,
       signIn: (credentials) => supabase.auth.signInWithPassword(credentials),
+      signInWithGoogle: () =>
+        supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: `${window.location.origin}/konto`,
+            queryParams: {
+              prompt: "select_account",
+            },
+          },
+        }),
       signOut: () => supabase.auth.signOut(),
       signUp: async ({ email, fullName, password, phone }) => {
         const result = await supabase.auth.signUp({

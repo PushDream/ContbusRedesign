@@ -1754,6 +1754,54 @@ h3 {
   background: var(--brand);
 }
 
+.account-google-button {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  color: var(--text-strong);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.account-google-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.account-google-button span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: #ffffff;
+  background: #4285f4;
+  border-radius: 50%;
+  font-size: 0.84rem;
+}
+
+.account-divider {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.account-divider::before,
+.account-divider::after {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  content: "";
+}
+
 .account-form {
   display: grid;
   gap: 12px;
