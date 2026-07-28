@@ -385,3 +385,181 @@ export async function fetchDispatcherOverview(date) {
 
   return fetchPublicDispatcherOverview(dashboardDate);
 }
+
+function groupBy(rows, key) {
+  return (rows || []).reduce((grouped, row) => {
+    const value = row[key];
+    grouped[value] = grouped[value] || [];
+    grouped[value].push(row);
+    return grouped;
+  }, {});
+}
+
+function routeLabel({ destination, origin }) {
+  return `${formatStationName(origin?.name)} - ${formatStationName(destination?.name)}`;
+}
+
+export async function fetchAdminOperations(date) {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+
+  const operationsDate = toDateOnly(date);
+  const [
+    { data: stations, error: stationsError },
+    { data: routes, error: routesError },
+    { data: trips, error: tripsError },
+    { data: vehicles, error: vehiclesError },
+    { data: profiles, error: profilesError },
+  ] = await Promise.all([
+    supabase.from("stations").select("*").eq("active", true),
+    supabase.from("routes").select("*").eq("active", true),
+    supabase
+      .from("trips")
+      .select("*")
+      .eq("departure_date", operationsDate)
+      .neq("status", "cancelled")
+      .order("departure_time", { ascending: true }),
+    supabase.from("vehicles").select("*").eq("active", true).order("label", { ascending: true }),
+    supabase.from("profiles").select("id, role, full_name, phone, created_at").order("created_at", { ascending: false }),
+  ]);
+
+  if (stationsError) throw stationsError;
+  if (routesError) throw routesError;
+  if (tripsError) throw tripsError;
+  if (vehiclesError) throw vehiclesError;
+  if (profilesError) throw profilesError;
+
+  const tripIds = (trips || []).map((trip) => trip.id);
+  const { data: bookings, error: bookingsError } = tripIds.length
+    ? await supabase.from("bookings").select("*").in("trip_id", tripIds).order("created_at", { ascending: false })
+    : { data: [], error: null };
+  if (bookingsError) throw bookingsError;
+
+  const bookingIds = (bookings || []).map((booking) => booking.id);
+  const [
+    { data: passengers, error: passengersError },
+    { data: payments, error: paymentsError },
+    { data: incidents, error: incidentsError },
+    { data: events, error: eventsError },
+  ] = await Promise.all([
+    bookingIds.length
+      ? supabase.from("booking_passengers").select("*").in("booking_id", bookingIds)
+      : { data: [], error: null },
+    bookingIds.length ? supabase.from("payments").select("*").in("booking_id", bookingIds) : { data: [], error: null },
+    tripIds.length
+      ? supabase.from("trip_incidents").select("*").in("trip_id", tripIds).order("created_at", { ascending: false })
+      : { data: [], error: null },
+    tripIds.length
+      ? supabase.from("trip_events").select("*").in("trip_id", tripIds).order("created_at", { ascending: false }).limit(40)
+      : { data: [], error: null },
+  ]);
+
+  if (passengersError) throw passengersError;
+  if (paymentsError) throw paymentsError;
+  if (incidentsError) throw incidentsError;
+  if (eventsError) throw eventsError;
+
+  const stationById = Object.fromEntries((stations || []).map((station) => [station.id, station]));
+  const routeById = Object.fromEntries((routes || []).map((route) => [route.id, route]));
+  const vehicleById = Object.fromEntries((vehicles || []).map((vehicle) => [vehicle.id, vehicle]));
+  const profileById = Object.fromEntries((profiles || []).map((profile) => [profile.id, profile]));
+  const passengersByBooking = groupBy(passengers, "booking_id");
+  const paymentsByBooking = groupBy(payments, "booking_id");
+  const bookingsByTrip = groupBy(bookings, "trip_id");
+  const incidentsByTrip = groupBy(incidents, "trip_id");
+  const eventsByTrip = groupBy(events, "trip_id");
+
+  const mappedTrips = (trips || []).map((trip) => {
+    const route = routeById[trip.route_id];
+    const origin = stationById[route?.origin_station_id];
+    const destination = stationById[route?.destination_station_id];
+    const tripBookings = bookingsByTrip[trip.id] || [];
+
+    return {
+      ...trip,
+      arrival_time: timeText(trip.arrival_time),
+      departure_time: timeText(trip.departure_time),
+      route_code: route?.code || "-",
+      route_label: routeLabel({ destination, origin }),
+      origin_name: formatStationName(origin?.name),
+      destination_name: formatStationName(destination?.name),
+      vehicle: vehicleById[trip.vehicle_id] || null,
+      driver: profileById[trip.driver_id] || null,
+      bookings: tripBookings,
+      booking_count: tripBookings.filter((booking) => booking.status !== "cancelled").length,
+      passenger_count: tripBookings
+        .filter((booking) => booking.status !== "cancelled")
+        .reduce((sum, booking) => sum + Number(booking.passenger_count || 0), 0),
+      revenue_total: tripBookings
+        .filter((booking) => booking.status !== "cancelled")
+        .reduce((sum, booking) => sum + Number(booking.total_amount || 0), 0),
+      incidents: incidentsByTrip[trip.id] || [],
+      events: eventsByTrip[trip.id] || [],
+    };
+  });
+
+  const tripById = Object.fromEntries(mappedTrips.map((trip) => [trip.id, trip]));
+  const mappedBookings = (bookings || []).map((booking) => {
+    const trip = tripById[booking.trip_id];
+    const bookingPassengers = passengersByBooking[booking.id] || [];
+    const payment = paymentsByBooking[booking.id]?.[0] || null;
+
+    return {
+      ...booking,
+      passengers: bookingPassengers,
+      payment,
+      route_label: trip?.route_label || "Trasa",
+      departure_date: trip?.departure_date,
+      departure_time: trip?.departure_time,
+      arrival_time: trip?.arrival_time,
+      checked_in_count: bookingPassengers.filter((passenger) => passenger.checked_in_at).length,
+    };
+  });
+
+  return {
+    bookings: mappedBookings,
+    drivers: (profiles || []).filter((profile) => profile.role === "driver"),
+    events: events || [],
+    incidents: incidents || [],
+    profiles: profiles || [],
+    trips: mappedTrips,
+    vehicles: vehicles || [],
+  };
+}
+
+export async function updateAdminTrip(tripId, values) {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+
+  const payload = {};
+  if ("driver_id" in values) payload.driver_id = values.driver_id || null;
+  if ("platform" in values) payload.platform = values.platform || null;
+  if ("status" in values) payload.status = values.status;
+  if ("vehicle_id" in values) payload.vehicle_id = values.vehicle_id || null;
+
+  const { error } = await supabase.from("trips").update(payload).eq("id", tripId);
+  if (error) throw error;
+}
+
+export async function updateAdminBookingStatus(bookingId, status) {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+
+  const { error } = await supabase.from("bookings").update({ status }).eq("id", bookingId);
+  if (error) throw error;
+}
+
+export async function updateAdminProfileRole(profileId, role) {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+
+  const { error } = await supabase.rpc("set_profile_role", {
+    target_profile_id: profileId,
+    target_role: role,
+  });
+  if (error) throw error;
+}

@@ -10,11 +10,20 @@ import {
   LogOut,
   RefreshCw,
   Route,
+  Search,
   Ticket,
+  UserCog,
   Users,
 } from "lucide-react";
-import { fetchDispatcherOverview } from "../lib/database.js";
+import {
+  fetchAdminOperations,
+  fetchDispatcherOverview,
+  updateAdminBookingStatus,
+  updateAdminProfileRole,
+  updateAdminTrip,
+} from "../lib/database.js";
 import { isSupabaseConfigured, supabase } from "../lib/supabase.js";
+import { useToast } from "../lib/ToastProvider.jsx";
 
 const statusLabels = {
   scheduled: "Planowany",
@@ -23,6 +32,20 @@ const statusLabels = {
   delayed: "Opóźniony",
   arrived: "Zakończony",
   cancelled: "Anulowany",
+};
+
+const bookingStatusLabels = {
+  pending: "Oczekuje",
+  paid: "Opłacona",
+  cancelled: "Anulowana",
+  refunded: "Zwrócona",
+};
+
+const roleLabels = {
+  customer: "Klient",
+  driver: "Kierowca",
+  dispatcher: "Dyspozytor",
+  admin: "Admin",
 };
 
 function getTodayDate() {
@@ -64,8 +87,10 @@ function isStaffProfile(profile) {
 }
 
 export default function AdminDashboardPage() {
+  const notify = useToast();
   const [date, setDate] = useState(getTodayDate());
   const [overview, setOverview] = useState(null);
+  const [operations, setOperations] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [authChecking, setAuthChecking] = useState(true);
@@ -75,6 +100,9 @@ export default function AdminDashboardPage() {
   const [authError, setAuthError] = useState("");
   const [credentials, setCredentials] = useState({ email: "", password: "" });
   const [signingIn, setSigningIn] = useState(false);
+  const [selectedTripId, setSelectedTripId] = useState("");
+  const [bookingQuery, setBookingQuery] = useState("");
+  const [savingKey, setSavingKey] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -167,10 +195,19 @@ export default function AdminDashboardPage() {
     setLoading(true);
     setErrorMessage("");
     try {
-      const nextOverview = await fetchDispatcherOverview(date);
+      const [nextOverview, nextOperations] = await Promise.all([
+        fetchDispatcherOverview(date),
+        fetchAdminOperations(date),
+      ]);
       setOverview(nextOverview);
+      setOperations(nextOperations);
+      setSelectedTripId((current) => {
+        if (current && nextOperations.trips.some((trip) => trip.id === current)) return current;
+        return nextOperations.trips[0]?.id || "";
+      });
     } catch (error) {
       setOverview(null);
+      setOperations(null);
       setErrorMessage(error.message || "Nie udało się pobrać danych dyspozytora.");
     } finally {
       setLoading(false);
@@ -189,13 +226,20 @@ export default function AdminDashboardPage() {
       };
     }
 
-    fetchDispatcherOverview(date)
-      .then((nextOverview) => {
-        if (active) setOverview(nextOverview);
+    Promise.all([fetchDispatcherOverview(date), fetchAdminOperations(date)])
+      .then(([nextOverview, nextOperations]) => {
+        if (!active) return;
+        setOverview(nextOverview);
+        setOperations(nextOperations);
+        setSelectedTripId((current) => {
+          if (current && nextOperations.trips.some((trip) => trip.id === current)) return current;
+          return nextOperations.trips[0]?.id || "";
+        });
       })
       .catch((error) => {
         if (!active) return;
         setOverview(null);
+        setOperations(null);
         setErrorMessage(error.message || "Nie udało się pobrać danych dyspozytora.");
       })
       .finally(() => {
@@ -231,6 +275,82 @@ export default function AdminDashboardPage() {
   const trips = useMemo(() => overview?.trips || [], [overview]);
   const routes = useMemo(() => overview?.routes || [], [overview]);
   const recentBookings = useMemo(() => overview?.recent_bookings || [], [overview]);
+  const operationalTrips = useMemo(() => operations?.trips || [], [operations]);
+  const operationalBookings = useMemo(() => operations?.bookings || [], [operations]);
+  const vehicles = useMemo(() => operations?.vehicles || [], [operations]);
+  const drivers = useMemo(() => operations?.drivers || [], [operations]);
+  const profiles = useMemo(() => operations?.profiles || [], [operations]);
+  const selectedTrip = operationalTrips.find((trip) => trip.id === selectedTripId) || operationalTrips[0] || null;
+  const selectedTripBookings = useMemo(
+    () => operationalBookings.filter((booking) => booking.trip_id === selectedTrip?.id),
+    [operationalBookings, selectedTrip?.id],
+  );
+  const filteredBookings = useMemo(() => {
+    const query = bookingQuery.trim().toLowerCase();
+    if (!query) return operationalBookings.slice(0, 12);
+    return operationalBookings.filter((booking) =>
+      [
+        booking.booking_reference,
+        booking.buyer_name,
+        booking.buyer_email,
+        booking.route_label,
+        ...booking.passengers.map((passenger) => passenger.ticket_code),
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query)),
+    );
+  }, [bookingQuery, operationalBookings]);
+
+  const reloadOperations = useCallback(async () => {
+    const [nextOverview, nextOperations] = await Promise.all([
+      fetchDispatcherOverview(date),
+      fetchAdminOperations(date),
+    ]);
+    setOverview(nextOverview);
+    setOperations(nextOperations);
+  }, [date]);
+
+  const saveTripField = async (tripId, values, successMessage) => {
+    const key = `trip-${tripId}`;
+    setSavingKey(key);
+    try {
+      await updateAdminTrip(tripId, values);
+      await reloadOperations();
+      notify(successMessage, "success");
+    } catch (error) {
+      notify(error.message || "Nie udało się zapisać kursu.", "error");
+    } finally {
+      setSavingKey("");
+    }
+  };
+
+  const saveBookingStatus = async (bookingId, status) => {
+    const key = `booking-${bookingId}`;
+    setSavingKey(key);
+    try {
+      await updateAdminBookingStatus(bookingId, status);
+      await reloadOperations();
+      notify("Status rezerwacji zapisany.", "success");
+    } catch (error) {
+      notify(error.message || "Nie udało się zapisać rezerwacji.", "error");
+    } finally {
+      setSavingKey("");
+    }
+  };
+
+  const saveProfileRole = async (profileId, role) => {
+    const key = `profile-${profileId}`;
+    setSavingKey(key);
+    try {
+      await updateAdminProfileRole(profileId, role);
+      await reloadOperations();
+      notify("Rola użytkownika zapisana.", "success");
+    } catch (error) {
+      notify(error.message || "Nie udało się zapisać roli.", "error");
+    } finally {
+      setSavingKey("");
+    }
+  };
 
   const busiestTrip = useMemo(
     () =>
@@ -365,6 +485,225 @@ export default function AdminDashboardPage() {
         <MetricCard icon={ClipboardList} label="Pojazdy" value={summary.vehicles || 0} hint="po aktywacji staff auth" />
       </section>
 
+      <section className="admin-ops-grid" aria-label="Operacje dyspozytora">
+        <div className="admin-panel">
+          <div className="admin-panel-header">
+            <div>
+              <p className="eyebrow">Operacje</p>
+              <h2>Sterowanie kursem</h2>
+            </div>
+            <Bus size={18} />
+          </div>
+
+          {selectedTrip ? (
+            <div className="admin-control-stack">
+              <div className="admin-selected-trip">
+                <div>
+                  <strong>{selectedTrip.route_label}</strong>
+                  <span>
+                    {selectedTrip.departure_time} - {selectedTrip.arrival_time} · {selectedTrip.route_code}
+                  </span>
+                </div>
+                <span className={`admin-status ${selectedTrip.status}`}>
+                  {statusLabels[selectedTrip.status] || selectedTrip.status}
+                </span>
+              </div>
+
+              <div className="admin-control-grid">
+                <label>
+                  <span>Status</span>
+                  <select
+                    disabled={savingKey === `trip-${selectedTrip.id}`}
+                    value={selectedTrip.status}
+                    onChange={(event) =>
+                      saveTripField(selectedTrip.id, { status: event.target.value }, "Status kursu zapisany.")
+                    }
+                  >
+                    {Object.entries(statusLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  <span>Pojazd</span>
+                  <select
+                    disabled={savingKey === `trip-${selectedTrip.id}`}
+                    value={selectedTrip.vehicle_id || ""}
+                    onChange={(event) =>
+                      saveTripField(selectedTrip.id, { vehicle_id: event.target.value }, "Pojazd przypisany.")
+                    }
+                  >
+                    <option value="">Do przypisania</option>
+                    {vehicles.map((vehicle) => (
+                      <option key={vehicle.id} value={vehicle.id}>
+                        {vehicle.label} · {vehicle.plate_number}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  <span>Kierowca</span>
+                  <select
+                    disabled={savingKey === `trip-${selectedTrip.id}`}
+                    value={selectedTrip.driver_id || ""}
+                    onChange={(event) =>
+                      saveTripField(selectedTrip.id, { driver_id: event.target.value }, "Kierowca przypisany.")
+                    }
+                  >
+                    <option value="">Do przypisania</option>
+                    {drivers.map((driver) => (
+                      <option key={driver.id} value={driver.id}>
+                        {driver.full_name || driver.phone || driver.id}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  <span>Peron</span>
+                  <input
+                    defaultValue={selectedTrip.platform || ""}
+                    disabled={savingKey === `trip-${selectedTrip.id}`}
+                    onBlur={(event) =>
+                      saveTripField(selectedTrip.id, { platform: event.target.value }, "Peron zapisany.")
+                    }
+                    placeholder="np. Peron 3"
+                  />
+                </label>
+              </div>
+
+              <div className="admin-trip-detail-grid">
+                <div>
+                  <span>Rezerwacje</span>
+                  <strong>{selectedTrip.booking_count || 0}</strong>
+                </div>
+                <div>
+                  <span>Pasażerowie</span>
+                  <strong>
+                    {selectedTrip.passenger_count || 0}/{selectedTrip.capacity}
+                  </strong>
+                </div>
+                <div>
+                  <span>Przychód</span>
+                  <strong>{money(selectedTrip.revenue_total)}</strong>
+                </div>
+                <div>
+                  <span>Incydenty</span>
+                  <strong>{selectedTrip.incidents.length}</strong>
+                </div>
+              </div>
+
+              <div className="admin-manifest-preview">
+                <h3>Manifest kursu</h3>
+                {selectedTripBookings.length === 0 && <p className="admin-empty">Brak rezerwacji na tym kursie.</p>}
+                {selectedTripBookings.map((booking) => (
+                  <article className="admin-manifest-booking" key={booking.id}>
+                    <div>
+                      <strong>{booking.booking_reference}</strong>
+                      <span>
+                        {booking.buyer_name} · {booking.checked_in_count}/{booking.passengers.length} odprawionych
+                      </span>
+                    </div>
+                    <select
+                      disabled={savingKey === `booking-${booking.id}`}
+                      value={booking.status}
+                      onChange={(event) => saveBookingStatus(booking.id, event.target.value)}
+                    >
+                      {Object.entries(bookingStatusLabels).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="admin-passenger-tags">
+                      {booking.passengers.map((passenger) => (
+                        <span key={passenger.id}>
+                          {passenger.seat_number} · {passenger.ticket_code}
+                          {passenger.checked_in_at ? " · OK" : ""}
+                        </span>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="admin-empty">Wybierz kurs z listy operacyjnej.</p>
+          )}
+        </div>
+
+        <aside className="admin-panel compact">
+          <div className="admin-panel-header">
+            <div>
+              <p className="eyebrow">Rezerwacje</p>
+              <h2>Wyszukiwarka</h2>
+            </div>
+            <Search size={18} />
+          </div>
+          <label className="admin-search-box">
+            <Search size={16} />
+            <input
+              value={bookingQuery}
+              onChange={(event) => setBookingQuery(event.target.value)}
+              placeholder="Kod, email, nazwisko..."
+            />
+          </label>
+          <div className="admin-booking-list operational">
+            {filteredBookings.length === 0 && <p className="admin-empty">Brak pasujących rezerwacji.</p>}
+            {filteredBookings.map((booking) => (
+              <article className="admin-booking-card" key={booking.id}>
+                <div>
+                  <strong>{booking.booking_reference}</strong>
+                  <span>{booking.route_label}</span>
+                  <span>
+                    {booking.buyer_name} · {booking.buyer_email}
+                  </span>
+                </div>
+                <div className="admin-booking-card-footer">
+                  <span className={`admin-status ${booking.status}`}>{bookingStatusLabels[booking.status]}</span>
+                  <strong>{money(booking.total_amount)}</strong>
+                </div>
+              </article>
+            ))}
+          </div>
+        </aside>
+
+        <aside className="admin-panel compact">
+          <div className="admin-panel-header">
+            <div>
+              <p className="eyebrow">Dostęp</p>
+              <h2>Role użytkowników</h2>
+            </div>
+            <UserCog size={18} />
+          </div>
+          <div className="admin-user-list">
+            {profiles.map((userProfile) => (
+              <article className="admin-user-row" key={userProfile.id}>
+                <div>
+                  <strong>{userProfile.full_name || "Bez nazwy"}</strong>
+                  <span>{userProfile.phone || userProfile.id.slice(0, 8)}</span>
+                </div>
+                <select
+                  disabled={savingKey === `profile-${userProfile.id}`}
+                  value={userProfile.role}
+                  onChange={(event) => saveProfileRole(userProfile.id, event.target.value)}
+                >
+                  {Object.entries(roleLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </article>
+            ))}
+          </div>
+        </aside>
+      </section>
+
       <section className="admin-layout">
         <div className="admin-panel">
           <div className="admin-panel-header">
@@ -383,10 +722,14 @@ export default function AdminDashboardPage() {
             {loading && <p className="admin-empty">Ładowanie kursów...</p>}
             {!loading && trips.length === 0 && <p className="admin-empty">Brak kursów dla tej daty.</p>}
 
-            {trips.map((trip) => {
+            {operationalTrips.map((trip) => {
               const load = occupancy(trip.passenger_count, trip.capacity);
               return (
-                <article className="admin-trip-row" key={trip.id}>
+                <article
+                  className={trip.id === selectedTrip?.id ? "admin-trip-row selected" : "admin-trip-row"}
+                  key={trip.id}
+                  onClick={() => setSelectedTripId(trip.id)}
+                >
                   <div className="admin-trip-time">
                     <strong>{timeText(trip.departure_time)}</strong>
                     <span>{timeText(trip.arrival_time)}</span>
@@ -402,7 +745,8 @@ export default function AdminDashboardPage() {
                     <div className="admin-trip-meta">
                       <span>{trip.route_code}</span>
                       <span>{trip.platform || "Bez peronu"}</span>
-                      <span>{trip.vehicle_label || "Pojazd do przypisania"}</span>
+                      <span>{trip.vehicle?.label || "Pojazd do przypisania"}</span>
+                      <span>{trip.driver?.full_name || "Kierowca do przypisania"}</span>
                     </div>
                     <div className="admin-progress">
                       <span style={{ width: `${load}%` }} />
