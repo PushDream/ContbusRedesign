@@ -185,6 +185,87 @@ export async function createBookingRecord({
   return Array.isArray(data) ? data[0] : data;
 }
 
+export async function fetchCustomerBookings() {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+
+  const { data: bookings, error: bookingsError } = await supabase
+    .from("bookings")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (bookingsError) throw bookingsError;
+  if (!bookings?.length) return [];
+
+  const bookingIds = bookings.map((booking) => booking.id);
+  const tripIds = [...new Set(bookings.map((booking) => booking.trip_id).filter(Boolean))];
+
+  const [
+    { data: passengers, error: passengersError },
+    { data: trips, error: tripsError },
+  ] = await Promise.all([
+    supabase.from("booking_passengers").select("*").in("booking_id", bookingIds),
+    supabase.from("trips").select("*").in("id", tripIds),
+  ]);
+
+  if (passengersError) throw passengersError;
+  if (tripsError) throw tripsError;
+
+  const routeIds = [...new Set((trips || []).map((trip) => trip.route_id).filter(Boolean))];
+  const routesResult = routeIds.length
+    ? await supabase.from("routes").select("*").in("id", routeIds)
+    : { data: [], error: null };
+  if (routesResult.error) throw routesResult.error;
+
+  const stationIds = [
+    ...new Set(
+      (routesResult.data || [])
+        .flatMap((route) => [route.origin_station_id, route.destination_station_id])
+        .filter(Boolean),
+    ),
+  ];
+  const stationsResult = stationIds.length
+    ? await supabase.from("stations").select("*").in("id", stationIds)
+    : { data: [], error: null };
+  if (stationsResult.error) throw stationsResult.error;
+
+  const passengersByBooking = (passengers || []).reduce((grouped, passenger) => {
+    grouped[passenger.booking_id] = grouped[passenger.booking_id] || [];
+    grouped[passenger.booking_id].push(passenger);
+    return grouped;
+  }, {});
+  const tripById = Object.fromEntries((trips || []).map((trip) => [trip.id, trip]));
+  const routeById = Object.fromEntries((routesResult.data || []).map((route) => [route.id, route]));
+  const stationById = Object.fromEntries((stationsResult.data || []).map((station) => [station.id, station]));
+
+  return bookings.map((booking) => {
+    const trip = tripById[booking.trip_id];
+    const route = routeById[trip?.route_id];
+    const origin = stationById[route?.origin_station_id];
+    const destination = stationById[route?.destination_station_id];
+    const bookingPassengers = passengersByBooking[booking.id] || [];
+
+    return {
+      id: booking.id,
+      reference: booking.booking_reference,
+      status: booking.status,
+      passengerCount: booking.passenger_count,
+      totalAmount: Number(booking.total_amount),
+      currency: booking.currency,
+      createdAt: booking.created_at,
+      buyerEmail: booking.buyer_email,
+      buyerName: booking.buyer_name,
+      route: `${formatStationName(origin?.name)} - ${formatStationName(destination?.name)}`,
+      departureDate: trip?.departure_date,
+      departureTime: timeText(trip?.departure_time),
+      arrivalTime: timeText(trip?.arrival_time),
+      seatNumbers: bookingPassengers.map((passenger) => passenger.seat_number),
+      ticketCodes: bookingPassengers.map((passenger) => passenger.ticket_code),
+    };
+  });
+}
+
 function formatStationName(value) {
   if (!value) return "Przystanek";
   if (value.includes("Lublin")) return "Lublin";

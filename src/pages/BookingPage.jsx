@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import {
@@ -15,6 +15,7 @@ import {
   Ticket,
 } from "lucide-react";
 import { useApp } from "../context/AppContext.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
 import { createBookingRecord, resolveDeparture } from "../lib/database.js";
 import {
@@ -71,6 +72,7 @@ function autoAssignSeats(fareId, chosen, needed) {
 
 export default function BookingPage() {
   const { t } = useApp();
+  const { profile, session } = useAuth();
   const notify = useToast();
   const [searchParams] = useSearchParams();
 
@@ -97,6 +99,30 @@ export default function BookingPage() {
   // Step 1 — passenger details
   const [buyer, setBuyer] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    let active = true;
+    if (!session) return undefined;
+
+    queueMicrotask(() => {
+      if (!active) return;
+      setBuyer((current) => {
+        if (current.email || current.firstName || current.lastName || current.phone) return current;
+        const fullName = profile?.full_name || session.user.user_metadata?.full_name || "";
+        const [firstName = "", ...lastNameParts] = fullName.trim().split(/\s+/).filter(Boolean);
+        return {
+          email: session.user.email || "",
+          firstName,
+          lastName: lastNameParts.join(" "),
+          phone: profile?.phone || session.user.user_metadata?.phone || "",
+        };
+      });
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [profile, session]);
 
   // Step 2 — seats + extras
   const [selectedSeats, setSelectedSeats] = useState([]);
