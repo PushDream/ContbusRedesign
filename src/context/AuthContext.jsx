@@ -22,6 +22,27 @@ export function AuthProvider({ children }) {
     }
 
     async function loadSession() {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
+
+      if (accessToken && refreshToken) {
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (!active) return;
+        if (data.session) {
+          window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+          setSession(data.session);
+          setLoadingAuth(false);
+          return;
+        }
+        if (error) {
+          console.error("Supabase OAuth session error", error.message);
+        }
+      }
+
       const { data } = await supabase.auth.getSession();
       if (!active) return;
       setSession(data.session);
