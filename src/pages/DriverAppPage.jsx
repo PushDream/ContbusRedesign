@@ -318,16 +318,32 @@ export default function DriverAppPage() {
               </div>
 
               <div className="driver-control-buttons">
-                <button className="secondary-button" onClick={() => setTripStatus("boarding")} type="button">
+                <button
+                  className={status === "boarding" ? "secondary-button active" : "secondary-button"}
+                  onClick={() => setTripStatus("boarding")}
+                  type="button"
+                >
                   Odprawa
                 </button>
-                <button className="secondary-button" onClick={() => setTripStatus("departed")} type="button">
+                <button
+                  className={status === "departed" ? "secondary-button active" : "secondary-button"}
+                  onClick={() => setTripStatus("departed")}
+                  type="button"
+                >
                   Wyjazd
                 </button>
-                <button className="secondary-button" onClick={() => setTripStatus("delayed")} type="button">
+                <button
+                  className={status === "delayed" ? "secondary-button active" : "secondary-button"}
+                  onClick={() => setTripStatus("delayed")}
+                  type="button"
+                >
                   Opoznienie
                 </button>
-                <button className="secondary-button" onClick={() => setTripStatus("arrived")} type="button">
+                <button
+                  className={status === "arrived" ? "secondary-button active" : "secondary-button"}
+                  onClick={() => setTripStatus("arrived")}
+                  type="button"
+                >
                   Przyjazd
                 </button>
               </div>

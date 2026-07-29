@@ -886,6 +886,38 @@ h3 {
   color: var(--brand);
 }
 
+.results-loading {
+  color: var(--text-soft);
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  border: 2px solid var(--border);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.spinner.large {
+  width: 24px;
+  height: 24px;
+  border-width: 3px;
+}
+
+.loading-row {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .ticket-confirmation {
   justify-items: start;
 }
@@ -4457,6 +4489,11 @@ a.contact-big-value:hover {
 
 .driver-control-buttons .secondary-button {
   min-height: 46px;
+}
+
+.driver-control-buttons .secondary-button.active {
+  color: #ffffff;
+  background: var(--brand);
 }
 
 .driver-stop-list {

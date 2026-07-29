@@ -123,7 +123,8 @@ export default function ResultsPage() {
         )}
 
         {loading && (
-          <div className="secure-box manage-empty">
+          <div className="secure-box results-loading">
+            <span className="spinner" aria-hidden="true" />
             <span>Ładowanie kursów z bazy...</span>
           </div>
         )}

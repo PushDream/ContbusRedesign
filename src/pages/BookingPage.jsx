@@ -424,7 +424,7 @@ export default function BookingPage() {
                 {extras.luggage && (
                   <div>
                     <span>Dodatkowa walizka</span>
-                    <strong>+15 zł</strong>
+                    <strong>+12 zł</strong>
                   </div>
                 )}
                 {extras.insurance && (

@@ -190,7 +190,7 @@ export default function AccountPage() {
     return (
       <div className="account-page">
         <section className="account-auth-card">
-          <UserRound size={24} />
+          <span className="spinner large" aria-hidden="true" />
           <h1>Sprawdzanie sesji</h1>
           <p>Ładowanie konta klienta.</p>
         </section>
@@ -352,7 +352,12 @@ export default function AccountPage() {
           </div>
 
           {bookingsError && <div className="account-error inline">{bookingsError}</div>}
-          {loadingBookings && <p className="account-empty">Ładowanie rezerwacji...</p>}
+          {loadingBookings && (
+            <p className="account-empty loading-row">
+              <span className="spinner" aria-hidden="true" />
+              Ładowanie rezerwacji...
+            </p>
+          )}
           {!loadingBookings && !bookings.length && !bookingsError && (
             <div className="account-empty">
               <Ticket size={22} />

@@ -552,7 +552,7 @@ export default function AdminDashboardPage() {
     return (
       <div className="admin-auth-page">
         <div className="admin-auth-card">
-          <Lock size={24} />
+          <span className="spinner large" aria-hidden="true" />
           <h1>{text.checkingAccessTitle}</h1>
           <p>{text.checkingAccessBody}</p>
         </div>
@@ -904,7 +904,12 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="admin-trip-list">
-            {loading && <p className="admin-empty">{text.loadingTrips}</p>}
+            {loading && (
+              <p className="admin-empty loading-row">
+                <span className="spinner" aria-hidden="true" />
+                {text.loadingTrips}
+              </p>
+            )}
             {!loading && trips.length === 0 && <p className="admin-empty">{text.noTripsForDate}</p>}
 
             {operationalTrips.map((trip) => {
