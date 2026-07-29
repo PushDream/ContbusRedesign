@@ -190,9 +190,18 @@ export async function fetchCustomerBookings() {
     throw new Error("Supabase is not configured for this deployment.");
   }
 
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) throw userError;
+  if (!user) return [];
+
   const { data: bookings, error: bookingsError } = await supabase
     .from("bookings")
     .select("*")
+    .eq("customer_id", user.id)
     .order("created_at", { ascending: false });
 
   if (bookingsError) throw bookingsError;
@@ -264,6 +273,55 @@ export async function fetchCustomerBookings() {
       ticketCodes: bookingPassengers.map((passenger) => passenger.ticket_code),
     };
   });
+}
+
+function mapLookupBooking(booking) {
+  if (!booking) return null;
+  return {
+    id: booking.booking_id,
+    reference: booking.booking_reference,
+    status: booking.booking_status,
+    passengerCount: booking.passenger_count,
+    totalAmount: Number(booking.total_amount),
+    currency: booking.currency,
+    buyerEmail: booking.buyer_email,
+    buyerName: booking.buyer_name,
+    route: booking.route_label,
+    departureDate: booking.departure_date,
+    departureTime: timeText(booking.departure_time),
+    arrivalTime: timeText(booking.arrival_time),
+    platform: booking.platform,
+    seatNumbers: booking.seat_numbers || [],
+    ticketCodes: booking.ticket_codes || [],
+  };
+}
+
+export async function lookupPublicBooking({ code, email }) {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+
+  const { data, error } = await supabase.rpc("lookup_public_booking", {
+    p_code: code,
+    p_email: email,
+  });
+
+  if (error) throw error;
+  return mapLookupBooking(Array.isArray(data) ? data[0] : data);
+}
+
+export async function cancelPublicBooking({ code, email }) {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+
+  const { data, error } = await supabase.rpc("cancel_public_booking", {
+    p_code: code,
+    p_email: email,
+  });
+
+  if (error) throw error;
+  return Array.isArray(data) ? data[0] || null : data || null;
 }
 
 function formatStationName(value) {

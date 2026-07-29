@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { Download, Mail, Search, TicketX, TriangleAlert } from "lucide-react";
-import { estimateArrival, fares, hashString, logoUrl } from "../data/content.js";
+import { fares, logoUrl } from "../data/content.js";
 import { useToast } from "../lib/ToastProvider.jsx";
+import { cancelPublicBooking, lookupPublicBooking } from "../lib/database.js";
 import { downloadTicketPdf } from "../lib/ticketPdf.js";
 import LiveTracker from "./LiveTracker.jsx";
 
-const routes = [
-  ["Lublin", "Warszawa Marriott"],
-  ["Lublin", "Lotnisko Chopina"],
-  ["Lublin", "Lotnisko Modlin"],
-];
+function routeParts(route) {
+  const [from = "-", to = "-"] = String(route || "").split(" - ");
+  return { from, to };
+}
 
 export default function ManageBooking({ t }) {
   const notify = useToast();
@@ -18,31 +18,40 @@ export default function ManageBooking({ t }) {
   const [booking, setBooking] = useState(null);
   const [searched, setSearched] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const findBooking = (event) => {
+  const findBooking = async (event) => {
     event.preventDefault();
-    const validFormat = /^CB-[A-Za-z]{3}-\d{4}$/.test(code.trim());
+    const validFormat = /^CB-[A-Za-z0-9-]{5,}$/i.test(code.trim());
     const validEmail = /\S+@\S+\.\S+/.test(email.trim());
     setSearched(true);
     if (!validFormat || !validEmail) {
       setBooking(null);
       return;
     }
-    const seed = hashString(code.trim().toUpperCase());
-    const route = routes[seed % routes.length];
-    setBooking({
-      code: code.trim().toUpperCase(),
-      email: email.trim(),
-      from: route[0],
-      to: route[1],
-      time: ["06:40", "08:15", "11:30", "14:10"][seed % 4],
-      status: "active",
-    });
+    setLoading(true);
+    try {
+      setBooking(await lookupPublicBooking({ code: code.trim().toUpperCase(), email: email.trim() }));
+    } catch (error) {
+      setBooking(null);
+      notify(error.message || t.manageNotFound, "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const cancelBooking = () => {
-    setBooking((current) => ({ ...current, status: "cancelled" }));
-    notify(t.toastCancelled, "info");
+  const cancelBooking = async () => {
+    try {
+      const result = await cancelPublicBooking({ code: booking.reference, email: booking.buyerEmail || email });
+      if (!result) {
+        notify(t.manageNotFound, "error");
+        return;
+      }
+      setBooking((current) => ({ ...current, status: result.booking_status }));
+      notify(t.toastCancelled, "info");
+    } catch (error) {
+      notify(error.message || t.manageNotFound, "error");
+    }
   };
 
   const resend = () => {
@@ -50,21 +59,21 @@ export default function ManageBooking({ t }) {
   };
 
   const handleDownloadPdf = async () => {
-    const fare = fares.find((item) => item.from === booking.from && item.to === booking.to);
+    const route = routeParts(booking.route);
     setDownloadingPdf(true);
     try {
       await downloadTicketPdf({
-        bookingCode: booking.code,
-        from: booking.from,
-        to: booking.to,
-        date: "18.07.2026",
-        time: booking.time,
-        arrival: estimateArrival(booking.time),
-        passengerName: booking.email,
-        seats: "-",
-        passengers: 1,
-        price: fare ? `${fare.price} zł` : "-",
-        payload: booking.code,
+        bookingCode: booking.reference,
+        from: route.from,
+        to: route.to,
+        date: booking.departureDate,
+        time: booking.departureTime,
+        arrival: booking.arrivalTime,
+        passengerName: booking.buyerName,
+        seats: booking.seatNumbers.join(", ") || "-",
+        passengers: booking.passengerCount,
+        price: `${booking.totalAmount} ${booking.currency === "PLN" ? "zł" : booking.currency}`,
+        payload: booking.ticketCodes[0] || booking.reference,
         logoUrl,
         labels: {
           bookingCode: t.manageCode,
@@ -84,10 +93,8 @@ export default function ManageBooking({ t }) {
     }
   };
 
-  const trackedFare =
-    booking &&
-    booking.status === "active" &&
-    fares.find((fare) => fare.from === booking.from && fare.to === booking.to);
+  const route = booking ? routeParts(booking.route) : { from: "-", to: "-" };
+  const trackedFare = fares.find((fare) => fare.from === route.from && fare.to === route.to);
 
   return (
     <section className="section manage-section" id="manage">
@@ -117,13 +124,13 @@ export default function ManageBooking({ t }) {
               value={email}
             />
           </label>
-          <button className="primary-button full" type="submit">
+          <button className="primary-button full" disabled={loading} type="submit">
             <Search size={18} />
-            {t.manageFind}
+            {loading ? "Sprawdzanie..." : t.manageFind}
           </button>
         </form>
 
-        {searched && !booking && (
+        {searched && !loading && !booking && (
           <div className="secure-box manage-empty">
             <TriangleAlert size={20} />
             <span>{t.manageNotFound}</span>
@@ -136,28 +143,28 @@ export default function ManageBooking({ t }) {
               <div>
                 <p className="eyebrow">{t.manageFound}</p>
                 <h3>
-                  {booking.from} - {booking.to}
+                  {route.from} - {route.to}
                 </h3>
-                <span>{booking.code}</span>
+                <span>{booking.reference}</span>
               </div>
               <span
                 className={
-                  booking.status === "active"
+                  booking.status !== "cancelled"
                     ? "status"
                     : "status status-cancelled"
                 }
               >
-                {booking.status === "active" ? t.manageStatusActive : t.manageStatusCancelled}
+                {booking.status !== "cancelled" ? t.manageStatusActive : t.manageStatusCancelled}
               </span>
             </div>
             <div className="fare-box">
               <div>
                 <span>{t.departureTimeLabel}</span>
-                <strong>{booking.time}</strong>
+                <strong>{booking.departureTime}</strong>
               </div>
               <div>
                 <span>{t.manageEmail}</span>
-                <strong>{booking.email}</strong>
+                <strong>{booking.buyerEmail}</strong>
               </div>
             </div>
             {booking.status === "cancelled" ? (
@@ -190,7 +197,7 @@ export default function ManageBooking({ t }) {
         )}
       </div>
 
-      {trackedFare && <LiveTracker activeFare={trackedFare} t={t} />}
+      {booking?.status !== "cancelled" && trackedFare && <LiveTracker activeFare={trackedFare} t={t} />}
     </section>
   );
 }

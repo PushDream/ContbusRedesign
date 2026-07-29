@@ -3,60 +3,60 @@ import { Download, Mail, Search, TicketX, TriangleAlert } from "lucide-react";
 import { ArrowRight } from "lucide-react";
 import { useApp } from "../context/AppContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
-import { estimateArrival, fares, getPlatform, hashString, logoUrl } from "../data/content.js";
+import { logoUrl } from "../data/content.js";
 import TicketQr from "../components/TicketQr.jsx";
+import { cancelPublicBooking, lookupPublicBooking } from "../lib/database.js";
 import { downloadTicketPdf } from "../lib/ticketPdf.js";
 
-const DEMO_CODE = "CB-3ZZTLH";
-
-const routes = [
-  ["Lublin", "Warszawa Marriott"],
-  ["Lublin", "Lotnisko Chopina"],
-  ["Lublin", "Lotnisko Modlin"],
-];
-
-function buildDemoTicket(code) {
-  const seed = hashString(code.trim().toUpperCase());
-  const route = routes[seed % routes.length];
-  const times = ["06:40", "08:15", "11:30", "14:10"];
-  const time = times[seed % times.length];
-  return {
-    code: code.trim().toUpperCase(),
-    from: route[0],
-    to: route[1],
-    time,
-    date: "2026-07-21",
-    seat: `${(seed % 10) + 2}${["A", "B", "C", "D"][seed % 4]}`,
-    passenger: "Jan Kowalski",
-    platform: getPlatform(route[0], route[1], time),
-    status: "active",
-  };
+function routeParts(route) {
+  const [from = "-", to = "-"] = String(route || "").split(" - ");
+  return { from, to };
 }
 
 export default function MyTicketsPage() {
   const { t } = useApp();
   const notify = useToast();
   const [input, setInput] = useState("");
+  const [email, setEmail] = useState("");
   const [ticket, setTicket] = useState(null);
   const [searched, setSearched] = useState(false);
-  const [cancelled, setCancelled] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSearch = (event) => {
+  const handleSearch = async (event) => {
     event.preventDefault();
     setSearched(true);
-    setCancelled(false);
-    const val = input.trim().toUpperCase();
-    if (val.startsWith("CB-") && val.length >= 5) {
-      setTicket(buildDemoTicket(val));
-    } else {
+    setLoading(true);
+    try {
+      const found = await lookupPublicBooking({
+        code: input.trim().toUpperCase(),
+        email: email.trim(),
+      });
+      setTicket(found);
+    } catch (error) {
       setTicket(null);
+      notify(error.message || t.manageNotFound, "error");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    setCancelled(true);
-    notify(t.toastCancelled, "info");
+  const handleCancel = async () => {
+    if (!ticket) return;
+    try {
+      const result = await cancelPublicBooking({
+        code: ticket.reference,
+        email: ticket.buyerEmail || email,
+      });
+      if (!result) {
+        notify(t.manageNotFound, "error");
+        return;
+      }
+      setTicket((current) => ({ ...current, status: result.booking_status }));
+      notify(t.toastCancelled, "info");
+    } catch (error) {
+      notify(error.message || t.manageNotFound, "error");
+    }
   };
 
   const handleResend = () => {
@@ -65,21 +65,21 @@ export default function MyTicketsPage() {
 
   const handleDownloadPdf = async () => {
     if (!ticket) return;
-    const fare = fares.find((f) => f.from === ticket.from && f.to === ticket.to);
+    const { from, to } = routeParts(ticket.route);
     setDownloadingPdf(true);
     try {
       await downloadTicketPdf({
-        bookingCode: ticket.code,
-        from: ticket.from,
-        to: ticket.to,
-        date: ticket.date,
-        time: ticket.time,
-        arrival: estimateArrival(ticket.time),
-        passengerName: ticket.passenger,
-        seats: ticket.seat,
-        passengers: 1,
-        price: fare ? `${fare.price} zł` : "-",
-        payload: ticket.code,
+        bookingCode: ticket.reference,
+        from,
+        to,
+        date: ticket.departureDate,
+        time: ticket.departureTime,
+        arrival: ticket.arrivalTime,
+        passengerName: ticket.buyerName,
+        seats: ticket.seatNumbers.join(", ") || "-",
+        passengers: ticket.passengerCount,
+        price: `${ticket.totalAmount} ${ticket.currency === "PLN" ? "zł" : ticket.currency}`,
+        payload: ticket.ticketCodes[0] || ticket.reference,
         logoUrl,
         labels: {
           bookingCode: t.manageCode,
@@ -99,7 +99,8 @@ export default function MyTicketsPage() {
     }
   };
 
-  const arrival = ticket ? estimateArrival(ticket.time) : null;
+  const route = ticket ? routeParts(ticket.route) : { from: "-", to: "-" };
+  const cancelled = ticket?.status === "cancelled";
 
   return (
     <div className="page-wrapper my-tickets-page">
@@ -116,19 +117,27 @@ export default function MyTicketsPage() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={`np. ${DEMO_CODE}`}
+              placeholder="np. CB-ABC123"
+              required
             />
           </label>
-          <button className="primary-button full" type="submit">
+          <label>
+            <span>{t.manageEmail}</span>
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="jan.kowalski@email.com"
+              required
+              type="email"
+            />
+          </label>
+          <button className="primary-button full" disabled={loading} type="submit">
             <Search size={18} />
-            Sprawdź
+            {loading ? "Sprawdzanie..." : "Sprawdź"}
           </button>
-          <p className="muted" style={{ fontSize: "0.82rem", margin: 0 }}>
-            Wypróbuj przykładowy kod: <strong>{DEMO_CODE}</strong>
-          </p>
         </form>
 
-        {searched && !ticket && (
+        {searched && !loading && !ticket && (
           <div className="secure-box manage-empty">
             <TriangleAlert size={20} />
             <span>{t.manageNotFound}</span>
@@ -146,37 +155,35 @@ export default function MyTicketsPage() {
 
             <div className="ticket-card-route">
               <div className="ticket-card-stop">
-                <strong>{ticket.time}</strong>
-                <span>{ticket.from}</span>
+                <strong>{ticket.departureTime}</strong>
+                <span>{route.from}</span>
               </div>
               <div className="ticket-card-arrow">
                 <ArrowRight size={20} />
-                <small>
-                  {fares.find((f) => f.from === ticket.from && f.to === ticket.to)?.duration || ""}
-                </small>
+                <small>{ticket.passengerCount} os.</small>
               </div>
               <div className="ticket-card-stop">
-                <strong>{arrival}</strong>
-                <span>{ticket.to}</span>
+                <strong>{ticket.arrivalTime}</strong>
+                <span>{route.to}</span>
               </div>
             </div>
 
             <div className="ticket-card-details">
               <div>
                 <span>{t.date}</span>
-                <strong>{ticket.date}</strong>
+                <strong>{ticket.departureDate}</strong>
               </div>
               <div>
                 <span>Miejsce</span>
-                <strong>{ticket.seat}</strong>
+                <strong>{ticket.seatNumbers.join(", ") || "-"}</strong>
               </div>
               <div>
                 <span>Pasażer</span>
-                <strong>{ticket.passenger}</strong>
+                <strong>{ticket.buyerName}</strong>
               </div>
               <div>
                 <span>Kod</span>
-                <strong>{ticket.code}</strong>
+                <strong>{ticket.reference}</strong>
               </div>
               {ticket.platform && (
                 <div>
@@ -187,7 +194,7 @@ export default function MyTicketsPage() {
             </div>
 
             <div className="ticket-card-qr">
-              <TicketQr value={ticket.code} size={140} />
+              <TicketQr value={ticket.ticketCodes[0] || ticket.reference} size={140} />
             </div>
 
             {cancelled ? (
