@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -239,7 +239,7 @@ export default function BookingPage() {
 
   const STEPS = [
     { n: 1, label: "Pasażer" },
-    { n: 2, label: "Miejsca i dodatki" },
+    { n: 2, label: "Miejsca & Dodatki" },
     { n: 3, label: "Płatność" },
   ];
 
@@ -261,15 +261,17 @@ export default function BookingPage() {
       </div>
 
       {step < 4 && (
-        <div className="booking-steps">
-          {STEPS.map(({ n, label }) => (
-            <div
-              key={n}
-              className={`booking-step-indicator ${step === n ? "active" : ""} ${step > n ? "done" : ""}`}
-            >
-              <span>{step > n ? <Check size={14} /> : n}</span>
-              {label}
-            </div>
+        <div className="stepper">
+          {STEPS.map(({ n, label }, idx) => (
+            <Fragment key={n}>
+              <div className={`stepper-step ${step === n ? "is-active" : ""} ${step > n ? "is-done" : ""}`}>
+                <div className="stepper-circle">{step > n ? <Check size={16} /> : n}</div>
+                <span className="stepper-label">{label}</span>
+              </div>
+              {idx < STEPS.length - 1 && (
+                <div className={`stepper-line ${step > n ? "is-done" : ""}`} />
+              )}
+            </Fragment>
           ))}
         </div>
       )}
@@ -320,10 +322,12 @@ export default function BookingPage() {
                   {errors.phone && <em className="field-error">{errors.phone}</em>}
                 </label>
               </div>
-              <button className="primary-button" type="button" onClick={handleStep1Next}>
-                Dalej — Miejsca i dodatki
-                <ArrowRight size={18} />
-              </button>
+              <div className="booking-step-nav">
+                <button className="primary-button" type="button" onClick={handleStep1Next}>
+                  Dalej — Miejsca i dodatki
+                  <ArrowRight size={18} />
+                </button>
+              </div>
             </div>
           )}
 
