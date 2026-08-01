@@ -2,18 +2,27 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
+  Bell,
   Bus,
   CalendarDays,
+  CheckCircle2,
+  Clock3,
   CircleDollarSign,
   ClipboardList,
+  Download,
+  Gauge,
   Lock,
   LogOut,
+  MapPin,
   RefreshCw,
   Route,
   Search,
+  ShieldAlert,
   Ticket,
   UserCog,
+  UserCheck,
   Users,
+  Wrench,
 } from "lucide-react";
 import {
   fetchAdminOperations,
@@ -106,6 +115,41 @@ const adminCopy = {
     noVisibleBookings: "Brak widocznych rezerwacji.",
     passengersShort: "pas.",
     checkedIn: "odprawionych",
+    commandCenter: "Centrum dowodzenia",
+    commandCenterLead: "Najważniejsze ryzyka, gotowość załogi i postęp odprawy w jednym miejscu.",
+    attentionQueue: "Wymaga uwagi",
+    noAttentionItems: "Brak krytycznych zadań dla wybranego dnia.",
+    delayedTrips: "Opóźnione kursy",
+    missingVehicles: "Kursy bez pojazdu",
+    missingDrivers: "Kursy bez kierowcy",
+    missingPlatforms: "Kursy bez peronu",
+    highOccupancy: "Kursy powyżej 85% obłożenia",
+    activeIncidents: "Aktywne incydenty",
+    fixNow: "Otwórz kurs",
+    readiness: "Gotowość operacyjna",
+    checkInProgress: "Postęp odprawy",
+    fleetAssigned: "Flota przypisana",
+    driversAssigned: "Kierowcy przypisani",
+    platformReady: "Perony gotowe",
+    liveTimeline: "Oś operacyjna",
+    noTimeline: "Brak zdarzeń operacyjnych dla tego dnia.",
+    timelineTrip: "Kurs",
+    timelineBooking: "Rezerwacja",
+    timelineIncident: "Incydent",
+    timelineEvent: "Zdarzenie",
+    manifestFilter: "Filtr manifestu",
+    allPassengers: "Wszyscy",
+    uncheckedPassengers: "Do odprawy",
+    checkedPassengers: "Odprawieni",
+    exportManifest: "Eksport manifestu",
+    exportDay: "Eksport dnia",
+    manifestExported: "Manifest pobrany.",
+    dayExported: "Raport dnia pobrany.",
+    openCustomer: "Klient",
+    payment: "Płatność",
+    readinessPoor: "Wymaga reakcji",
+    readinessOk: "Pod kontrolą",
+    readinessGood: "Gotowe",
     statusLabels: {
       scheduled: "Planowany",
       boarding: "Wsiadanie",
@@ -206,6 +250,41 @@ const adminCopy = {
     noVisibleBookings: "No visible bookings.",
     passengersShort: "pax",
     checkedIn: "checked in",
+    commandCenter: "Command center",
+    commandCenterLead: "The key risks, crew readiness, and boarding progress in one place.",
+    attentionQueue: "Needs attention",
+    noAttentionItems: "No critical tasks for the selected day.",
+    delayedTrips: "Delayed trips",
+    missingVehicles: "Trips without vehicle",
+    missingDrivers: "Trips without driver",
+    missingPlatforms: "Trips without platform",
+    highOccupancy: "Trips above 85% occupancy",
+    activeIncidents: "Active incidents",
+    fixNow: "Open trip",
+    readiness: "Operational readiness",
+    checkInProgress: "Check-in progress",
+    fleetAssigned: "Fleet assigned",
+    driversAssigned: "Drivers assigned",
+    platformReady: "Platforms ready",
+    liveTimeline: "Operations timeline",
+    noTimeline: "No operational events for this day.",
+    timelineTrip: "Trip",
+    timelineBooking: "Booking",
+    timelineIncident: "Incident",
+    timelineEvent: "Event",
+    manifestFilter: "Manifest filter",
+    allPassengers: "All",
+    uncheckedPassengers: "To check in",
+    checkedPassengers: "Checked in",
+    exportManifest: "Export manifest",
+    exportDay: "Export day",
+    manifestExported: "Manifest downloaded.",
+    dayExported: "Day report downloaded.",
+    openCustomer: "Customer",
+    payment: "Payment",
+    readinessPoor: "Needs action",
+    readinessOk: "Under control",
+    readinessGood: "Ready",
     statusLabels: {
       scheduled: "Scheduled",
       boarding: "Boarding",
@@ -252,6 +331,52 @@ function occupancy(passengers, capacity) {
   return Math.min(100, Math.round((Number(passengers || 0) / Number(capacity)) * 100));
 }
 
+function readinessTone(value) {
+  if (value >= 90) return "good";
+  if (value >= 65) return "ok";
+  return "poor";
+}
+
+function toPercent(value, total) {
+  if (!total) return 100;
+  return Math.round((Number(value || 0) / Number(total || 0)) * 100);
+}
+
+function dateTimeMs(date, time) {
+  const normalizedTime = timeText(time) || "00:00";
+  const value = new Date(`${date}T${normalizedTime}:00`).getTime();
+  return Number.isNaN(value) ? 0 : value;
+}
+
+function formatDateTime(value, text) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString(text.locale, {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "2-digit",
+  });
+}
+
+function downloadCsv(filename, rows) {
+  const body = rows
+    .map((row) =>
+      row
+        .map((cell) => `"${String(cell ?? "").replaceAll('"', '""')}"`)
+        .join(","),
+    )
+    .join("\n");
+  const blob = new Blob([body], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function MetricCard({ icon: Icon, label, value, hint }) {
   return (
     <article className="admin-metric">
@@ -261,6 +386,21 @@ function MetricCard({ icon: Icon, label, value, hint }) {
       <span>{label}</span>
       <strong>{value}</strong>
       {hint ? <small>{hint}</small> : null}
+    </article>
+  );
+}
+
+function ReadinessCard({ icon: Icon, label, value, tone }) {
+  return (
+    <article className={`admin-readiness-card ${tone}`}>
+      <div>
+        <Icon size={18} />
+        <span>{label}</span>
+      </div>
+      <strong>{value}%</strong>
+      <div className="admin-readiness-track">
+        <span style={{ width: `${value}%` }} />
+      </div>
     </article>
   );
 }
@@ -290,6 +430,7 @@ export default function AdminDashboardPage() {
   const [signingIn, setSigningIn] = useState(false);
   const [selectedTripId, setSelectedTripId] = useState("");
   const [bookingQuery, setBookingQuery] = useState("");
+  const [manifestFilter, setManifestFilter] = useState("all");
   const [savingKey, setSavingKey] = useState("");
 
   useEffect(() => {
@@ -473,6 +614,17 @@ export default function AdminDashboardPage() {
     () => operationalBookings.filter((booking) => booking.trip_id === selectedTrip?.id),
     [operationalBookings, selectedTrip?.id],
   );
+  const visibleSelectedTripBookings = useMemo(() => {
+    if (manifestFilter === "checked") {
+      return selectedTripBookings.filter(
+        (booking) => booking.passengers.length > 0 && booking.checked_in_count >= booking.passengers.length,
+      );
+    }
+    if (manifestFilter === "unchecked") {
+      return selectedTripBookings.filter((booking) => booking.checked_in_count < booking.passengers.length);
+    }
+    return selectedTripBookings;
+  }, [manifestFilter, selectedTripBookings]);
   const filteredBookings = useMemo(() => {
     const query = bookingQuery.trim().toLowerCase();
     if (!query) return operationalBookings.slice(0, 12);
@@ -547,6 +699,184 @@ export default function AdminDashboardPage() {
         .sort((left, right) => Number(right.passenger_count || 0) - Number(left.passenger_count || 0))[0],
     [trips],
   );
+
+  const operationalHealth = useMemo(() => {
+    const activeTrips = operationalTrips.filter((trip) => trip.status !== "cancelled");
+    const totalTrips = activeTrips.length;
+    const checkedInPassengers = operationalBookings.reduce(
+      (sum, booking) => sum + Number(booking.checked_in_count || 0),
+      0,
+    );
+    const bookedPassengers = activeTrips.reduce((sum, trip) => sum + Number(trip.passenger_count || 0), 0);
+    const delayedTrips = activeTrips.filter((trip) => trip.status === "delayed");
+    const missingVehicles = activeTrips.filter((trip) => !trip.vehicle_id);
+    const missingDrivers = activeTrips.filter((trip) => !trip.driver_id);
+    const missingPlatforms = activeTrips.filter((trip) => !trip.platform);
+    const highOccupancyTrips = activeTrips.filter((trip) => occupancy(trip.passenger_count, trip.capacity) >= 85);
+    const activeIncidents = activeTrips.flatMap((trip) => trip.incidents || []);
+
+    return {
+      activeIncidents,
+      bookedPassengers,
+      checkedInPassengers,
+      checkInRate: toPercent(checkedInPassengers, bookedPassengers),
+      delayedTrips,
+      driverRate: toPercent(totalTrips - missingDrivers.length, totalTrips),
+      fleetRate: toPercent(totalTrips - missingVehicles.length, totalTrips),
+      highOccupancyTrips,
+      missingDrivers,
+      missingPlatforms,
+      missingVehicles,
+      platformRate: toPercent(totalTrips - missingPlatforms.length, totalTrips),
+      totalTrips,
+    };
+  }, [operationalBookings, operationalTrips]);
+
+  const attentionItems = useMemo(() => {
+    const items = [
+      {
+        count: operationalHealth.delayedTrips.length,
+        icon: Clock3,
+        label: text.delayedTrips,
+        tone: "danger",
+        trips: operationalHealth.delayedTrips,
+      },
+      {
+        count: operationalHealth.missingDrivers.length,
+        icon: UserCheck,
+        label: text.missingDrivers,
+        tone: "warning",
+        trips: operationalHealth.missingDrivers,
+      },
+      {
+        count: operationalHealth.missingVehicles.length,
+        icon: Wrench,
+        label: text.missingVehicles,
+        tone: "warning",
+        trips: operationalHealth.missingVehicles,
+      },
+      {
+        count: operationalHealth.missingPlatforms.length,
+        icon: MapPin,
+        label: text.missingPlatforms,
+        tone: "info",
+        trips: operationalHealth.missingPlatforms,
+      },
+      {
+        count: operationalHealth.highOccupancyTrips.length,
+        icon: Gauge,
+        label: text.highOccupancy,
+        tone: "info",
+        trips: operationalHealth.highOccupancyTrips,
+      },
+      {
+        count: operationalHealth.activeIncidents.length,
+        icon: ShieldAlert,
+        label: text.activeIncidents,
+        tone: "danger",
+        trips: operationalTrips.filter((trip) => trip.incidents?.length),
+      },
+    ];
+    return items.filter((item) => item.count > 0);
+  }, [operationalHealth, operationalTrips, text]);
+
+  const timelineItems = useMemo(() => {
+    const tripItems = operationalTrips.slice(0, 12).map((trip) => ({
+      id: `trip-${trip.id}`,
+      at: dateTimeMs(trip.departure_date || date, trip.departure_time),
+      icon: Bus,
+      label: text.timelineTrip,
+      title: trip.route_label,
+      detail: `${timeText(trip.departure_time)} · ${statusLabels[trip.status] || trip.status}`,
+      tripId: trip.id,
+      tone: trip.status,
+    }));
+    const bookingItems = operationalBookings.slice(0, 8).map((booking) => ({
+      id: `booking-${booking.id}`,
+      at: new Date(booking.created_at || 0).getTime() || dateTimeMs(date, booking.departure_time),
+      icon: Ticket,
+      label: text.timelineBooking,
+      title: booking.booking_reference,
+      detail: `${booking.route_label} · ${booking.passenger_count || booking.passengers.length} ${text.passengersShort}`,
+      tripId: booking.trip_id,
+      tone: booking.status,
+    }));
+    const incidentItems = operationalHealth.activeIncidents.slice(0, 8).map((incident) => ({
+      id: `incident-${incident.id}`,
+      at: new Date(incident.created_at || 0).getTime() || Date.now(),
+      icon: ShieldAlert,
+      label: text.timelineIncident,
+      title: incident.title || incident.type || text.activeIncidents,
+      detail: incident.description || incident.notes || incident.status || "-",
+      tripId: incident.trip_id,
+      tone: "danger",
+    }));
+    const eventItems = (operations?.events || []).slice(0, 8).map((event) => ({
+      id: `event-${event.id}`,
+      at: new Date(event.created_at || 0).getTime() || Date.now(),
+      icon: Activity,
+      label: text.timelineEvent,
+      title: event.event_type || event.type || text.timelineEvent,
+      detail: event.message || event.description || event.status || "-",
+      tripId: event.trip_id,
+      tone: "info",
+    }));
+
+    return [...incidentItems, eventItems, bookingItems, tripItems]
+      .flat()
+      .filter((item) => item.at)
+      .sort((left, right) => left.at - right.at)
+      .slice(0, 14);
+  }, [
+    date,
+    operationalBookings,
+    operationalHealth.activeIncidents,
+    operationalTrips,
+    operations?.events,
+    statusLabels,
+    text,
+  ]);
+
+  const exportSelectedManifest = () => {
+    if (!selectedTrip) return;
+    const rows = [
+      ["route", "departure", "booking_reference", "buyer", "email", "seat", "ticket_code", "checked_in"],
+      ...selectedTripBookings.flatMap((booking) =>
+        booking.passengers.map((passenger) => [
+          selectedTrip.route_label,
+          `${selectedTrip.departure_date} ${selectedTrip.departure_time}`,
+          booking.booking_reference,
+          booking.buyer_name,
+          booking.buyer_email,
+          passenger.seat_number,
+          passenger.ticket_code,
+          passenger.checked_in_at ? "yes" : "no",
+        ]),
+      ),
+    ];
+    downloadCsv(`contbus-manifest-${selectedTrip.route_code}-${selectedTrip.departure_date}.csv`, rows);
+    notify(text.manifestExported, "success");
+  };
+
+  const exportDayReport = () => {
+    const rows = [
+      ["time", "route", "status", "platform", "vehicle", "driver", "passengers", "capacity", "bookings", "revenue"],
+      ...operationalTrips.map((trip) => [
+        trip.departure_time,
+        trip.route_label,
+        statusLabels[trip.status] || trip.status,
+        trip.platform || "",
+        trip.vehicle?.label || "",
+        trip.driver?.full_name || "",
+        trip.passenger_count || 0,
+        trip.capacity || 0,
+        trip.booking_count || 0,
+        trip.revenue_total || 0,
+      ]),
+    ];
+    downloadCsv(`contbus-operacje-${date}.csv`, rows);
+    notify(text.dayExported, "success");
+  };
 
   if (authChecking || profileChecking) {
     return (
@@ -640,6 +970,10 @@ export default function AdminDashboardPage() {
             <RefreshCw size={17} />
             {text.refresh}
           </button>
+          <button className="secondary-button" disabled={loading || !operationalTrips.length} onClick={exportDayReport} type="button">
+            <Download size={17} />
+            {text.exportDay}
+          </button>
           <button className="secondary-button" onClick={handleSignOut} type="button">
             <LogOut size={17} />
             {text.logout}
@@ -668,6 +1002,89 @@ export default function AdminDashboardPage() {
         <MetricCard icon={CircleDollarSign} label={text.sales} value={money(summary.revenue, text)} hint={text.paidDemo} />
         <MetricCard icon={Route} label={text.activeRoutes} value={summary.routes || routes.length} />
         <MetricCard icon={ClipboardList} label={text.vehicles} value={summary.vehicles || 0} hint={text.staffAuthHint} />
+      </section>
+
+      <section className="admin-command-grid">
+        <div className="admin-panel admin-command-panel">
+          <div className="admin-panel-header">
+            <div>
+              <p className="eyebrow">{text.commandCenter}</p>
+              <h2>{text.attentionQueue}</h2>
+            </div>
+            <Bell size={18} />
+          </div>
+          <p className="admin-command-lead">{text.commandCenterLead}</p>
+          <div className="admin-attention-list">
+            {attentionItems.length === 0 && (
+              <div className="admin-attention-empty">
+                <CheckCircle2 size={20} />
+                <span>{text.noAttentionItems}</span>
+              </div>
+            )}
+            {attentionItems.map((item) => {
+              const Icon = item.icon;
+              const targetTrip = item.trips[0];
+              return (
+                <article className={`admin-attention-item ${item.tone}`} key={item.label}>
+                  <div className="admin-attention-icon">
+                    <Icon size={18} />
+                  </div>
+                  <div>
+                    <strong>{item.count}</strong>
+                    <span>{item.label}</span>
+                  </div>
+                  {targetTrip && (
+                    <button onClick={() => setSelectedTripId(targetTrip.id)} type="button">
+                      {text.fixNow}
+                    </button>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="admin-panel admin-readiness-panel">
+          <div className="admin-panel-header">
+            <div>
+              <p className="eyebrow">{text.readiness}</p>
+              <h2>
+                {operationalHealth.checkInRate >= 90
+                  ? text.readinessGood
+                  : operationalHealth.checkInRate >= 65
+                    ? text.readinessOk
+                    : text.readinessPoor}
+              </h2>
+            </div>
+            <Gauge size={18} />
+          </div>
+          <div className="admin-readiness-grid">
+            <ReadinessCard
+              icon={Ticket}
+              label={text.checkInProgress}
+              tone={readinessTone(operationalHealth.checkInRate)}
+              value={operationalHealth.checkInRate}
+            />
+            <ReadinessCard
+              icon={Bus}
+              label={text.fleetAssigned}
+              tone={readinessTone(operationalHealth.fleetRate)}
+              value={operationalHealth.fleetRate}
+            />
+            <ReadinessCard
+              icon={UserCheck}
+              label={text.driversAssigned}
+              tone={readinessTone(operationalHealth.driverRate)}
+              value={operationalHealth.driverRate}
+            />
+            <ReadinessCard
+              icon={MapPin}
+              label={text.platformReady}
+              tone={readinessTone(operationalHealth.platformRate)}
+              value={operationalHealth.platformRate}
+            />
+          </div>
+        </div>
       </section>
 
       <section className="admin-ops-grid" aria-label={text.dispatcherOps}>
@@ -783,9 +1200,42 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="admin-manifest-preview">
-                <h3>{text.tripManifest}</h3>
-                {selectedTripBookings.length === 0 && <p className="admin-empty">{text.noBookingsOnTrip}</p>}
-                {selectedTripBookings.map((booking) => (
+                <div className="admin-manifest-toolbar">
+                  <div>
+                    <h3>{text.tripManifest}</h3>
+                    <span>
+                      {selectedTrip.booking_count || 0} {text.reservationsShort} ·{" "}
+                      {selectedTrip.passenger_count || 0}/{selectedTrip.capacity} {text.passengersShort}
+                    </span>
+                  </div>
+                  <div className="admin-segmented">
+                    {[
+                      ["all", text.allPassengers],
+                      ["unchecked", text.uncheckedPassengers],
+                      ["checked", text.checkedPassengers],
+                    ].map(([value, label]) => (
+                      <button
+                        className={manifestFilter === value ? "active" : ""}
+                        key={value}
+                        onClick={() => setManifestFilter(value)}
+                        type="button"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    className="admin-icon-button"
+                    disabled={!selectedTripBookings.length}
+                    onClick={exportSelectedManifest}
+                    title={text.exportManifest}
+                    type="button"
+                  >
+                    <Download size={17} />
+                  </button>
+                </div>
+                {visibleSelectedTripBookings.length === 0 && <p className="admin-empty">{text.noBookingsOnTrip}</p>}
+                {visibleSelectedTripBookings.map((booking) => (
                   <article className="admin-manifest-booking" key={booking.id}>
                     <div>
                       <strong>{booking.booking_reference}</strong>
@@ -804,6 +1254,20 @@ export default function AdminDashboardPage() {
                         </option>
                       ))}
                     </select>
+                    <div className="admin-booking-mini-grid">
+                      <span>
+                        <UserCheck size={13} />
+                        {booking.checked_in_count}/{booking.passengers.length}
+                      </span>
+                      <span>
+                        <CircleDollarSign size={13} />
+                        {money(booking.total_amount, text)}
+                      </span>
+                      <span>
+                        <Ticket size={13} />
+                        {booking.payment?.provider || text.payment}
+                      </span>
+                    </div>
                     <div className="admin-passenger-tags">
                       {booking.passengers.map((passenger) => (
                         <span key={passenger.id}>
@@ -887,6 +1351,41 @@ export default function AdminDashboardPage() {
             ))}
           </div>
         </aside>
+      </section>
+
+      <section className="admin-panel admin-timeline-panel">
+        <div className="admin-panel-header">
+          <div>
+            <p className="eyebrow">{text.today}</p>
+            <h2>{text.liveTimeline}</h2>
+          </div>
+          <Activity size={18} />
+        </div>
+        <div className="admin-timeline">
+          {timelineItems.length === 0 && <p className="admin-empty">{text.noTimeline}</p>}
+          {timelineItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                className={`admin-timeline-item ${item.tone || ""}`}
+                key={item.id}
+                onClick={() => item.tripId && setSelectedTripId(item.tripId)}
+                type="button"
+              >
+                <span className="admin-timeline-time">{formatDateTime(item.at, text)}</span>
+                <span className="admin-timeline-icon">
+                  <Icon size={16} />
+                </span>
+                <span className="admin-timeline-copy">
+                  <strong>{item.title}</strong>
+                  <small>
+                    {item.label} · {item.detail}
+                  </small>
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       <section className="admin-layout">

@@ -1523,6 +1523,161 @@ h3 {
   margin-top: 18px;
 }
 
+.admin-command-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.admin-command-panel,
+.admin-readiness-panel {
+  min-height: 100%;
+}
+
+.admin-command-lead {
+  margin: 0;
+  padding: 18px 22px 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.admin-attention-list {
+  display: grid;
+  gap: 10px;
+  padding: 18px 22px 22px;
+}
+
+.admin-attention-item,
+.admin-attention-empty {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 70px;
+  padding: 12px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+}
+
+.admin-attention-empty {
+  grid-template-columns: 32px 1fr;
+  color: var(--brand-dark);
+  background: var(--brand-soft-bg);
+  font-weight: 900;
+}
+
+.admin-attention-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  color: var(--brand-dark);
+  background: var(--bg-elevated);
+  border-radius: 8px;
+}
+
+.admin-attention-item.warning .admin-attention-icon {
+  color: #8a5600;
+  background: #fff1ca;
+}
+
+.admin-attention-item.danger .admin-attention-icon {
+  color: var(--danger);
+  background: var(--danger-soft-bg);
+}
+
+.admin-attention-item strong {
+  display: block;
+  color: var(--text-strong);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.admin-attention-item span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.admin-attention-item button,
+.admin-icon-button,
+.admin-segmented button,
+.admin-timeline-item {
+  min-height: 38px;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.admin-attention-item button {
+  padding: 0 12px;
+  color: var(--brand-dark);
+  background: var(--brand-soft-bg);
+  border-radius: 8px;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.admin-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 18px 22px 22px;
+}
+
+.admin-readiness-card {
+  display: grid;
+  gap: 12px;
+  min-height: 132px;
+  padding: 16px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+}
+
+.admin-readiness-card > div:first-child {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.admin-readiness-card strong {
+  color: var(--text-strong);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.admin-readiness-track {
+  height: 8px;
+  overflow: hidden;
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.admin-readiness-track span {
+  display: block;
+  height: 100%;
+  background: var(--brand);
+  border-radius: inherit;
+}
+
+.admin-readiness-card.ok .admin-readiness-track span {
+  background: #d97706;
+}
+
+.admin-readiness-card.poor .admin-readiness-track span {
+  background: var(--danger);
+}
+
 .admin-ops-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.55fr) minmax(300px, 0.55fr);
@@ -1835,10 +1990,64 @@ h3 {
   gap: 10px;
 }
 
+.admin-manifest-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
 .admin-manifest-preview h3 {
   margin: 0;
   color: var(--text-strong);
   font-size: 0.95rem;
+}
+
+.admin-manifest-toolbar span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.admin-segmented {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+}
+
+.admin-segmented button {
+  padding: 0 10px;
+  color: var(--text-muted);
+  background: transparent;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.admin-segmented button.active {
+  color: var(--brand-dark);
+  background: var(--bg-elevated);
+  box-shadow: 0 1px 4px var(--shadow);
+}
+
+.admin-icon-button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  color: var(--brand-dark);
+  background: var(--brand-soft-bg);
+  border-radius: 8px;
+}
+
+.admin-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
 }
 
 .admin-manifest-booking,
@@ -1850,6 +2059,28 @@ h3 {
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
   border-radius: 8px;
+}
+
+.admin-booking-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-booking-mini-grid span {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px;
+  overflow: hidden;
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-passenger-tags {
@@ -1901,6 +2132,80 @@ h3 {
 .admin-user-row {
   grid-template-columns: minmax(0, 1fr) 132px;
   align-items: center;
+}
+
+.admin-timeline-panel {
+  margin-top: 18px;
+}
+
+.admin-timeline {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  padding: 10px;
+}
+
+.admin-timeline-item {
+  display: grid;
+  grid-template-columns: 112px 34px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 12px;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border-radius: 8px;
+}
+
+.admin-timeline-item:hover {
+  background: var(--brand-soft-bg);
+}
+
+.admin-timeline-time {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.admin-timeline-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  color: var(--brand-dark);
+  background: var(--brand-soft-bg);
+  border-radius: 8px;
+}
+
+.admin-timeline-item.danger .admin-timeline-icon,
+.admin-timeline-item.delayed .admin-timeline-icon {
+  color: var(--danger);
+  background: var(--danger-soft-bg);
+}
+
+.admin-timeline-copy {
+  min-width: 0;
+}
+
+.admin-timeline-copy strong,
+.admin-timeline-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-timeline-copy strong {
+  color: var(--text-strong);
+  font-size: 0.86rem;
+}
+
+.admin-timeline-copy small {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 800;
 }
 
 /* ---------- Customer account ---------- */
@@ -2247,6 +2552,10 @@ h3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .admin-command-grid {
+    grid-template-columns: 1fr;
+  }
+
   .admin-ops-grid,
   .admin-layout {
     grid-template-columns: 1fr;
@@ -2274,8 +2583,34 @@ h3 {
     width: 100%;
   }
 
+  .admin-command-grid {
+    gap: 12px;
+  }
+
+  .admin-readiness-grid,
   .admin-metrics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-attention-item {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .admin-attention-item button {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .admin-manifest-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-segmented {
+    overflow-x: auto;
+  }
+
+  .admin-timeline {
+    grid-template-columns: 1fr;
   }
 
   .admin-trip-row {
@@ -2313,8 +2648,21 @@ h3 {
 }
 
 @media (max-width: 460px) {
+  .admin-readiness-grid,
   .admin-metrics-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-booking-mini-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-timeline-item {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-timeline-icon {
+    display: none;
   }
 
   .admin-route-row {
