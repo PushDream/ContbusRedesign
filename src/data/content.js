@@ -393,7 +393,7 @@ export const copy = {
     portalNote:
       "Jeśli wiadomość z biletem nie dotrze, pasażer może pobrać bilet po adresie e-mail użytym przy zakupie.",
     prototypeNotice:
-      "To jest prototyp. Wersja produkcyjna podłączy operatora płatności i faktury.",
+      "Tryb demo: rezerwacja zostanie zapisana w systemie, a płatność oznaczona jako testowa do czasu podłączenia operatora płatności.",
     payButton: "Zapłać",
     ticketReadyTitle: "Bilet gotowy",
     ticketConfirmationText:
@@ -562,7 +562,7 @@ export const copy = {
     portalNote:
       "If the ticket email doesn't arrive, the passenger can download it using the email address used at purchase.",
     prototypeNotice:
-      "This is a prototype. The production version will connect a real payment provider and invoicing.",
+      "Demo mode: the booking is saved in the system, and payment is marked as test until the payment provider is connected.",
     payButton: "Pay",
     ticketReadyTitle: "Your ticket is ready",
     ticketConfirmationText: "Booking code {code} has been assigned to {email}. Seats: {seats}.",
@@ -730,7 +730,7 @@ export const copy = {
     portalNote:
       "Якщо лист із квитком не прийде, пасажир може завантажити квиток за адресою email, вказаною при купівлі.",
     prototypeNotice:
-      "Це прототип. Робоча версія підключить справжнього платіжного оператора та рахунки.",
+      "Демо-режим: бронювання зберігається в системі, а платіж позначається як тестовий до підключення платіжного оператора.",
     payButton: "Сплатити",
     ticketReadyTitle: "Квиток готовий",
     ticketConfirmationText: "Код бронювання {code} закріплено за адресою {email}. Місця: {seats}.",
