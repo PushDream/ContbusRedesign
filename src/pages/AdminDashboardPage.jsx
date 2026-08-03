@@ -170,6 +170,13 @@ const adminCopy = {
       dispatcher: "Dyspozytor",
       admin: "Admin",
     },
+    incidentSeverityLabels: {
+      delay: "Opóźnienie",
+      technical: "Techniczny",
+      passenger: "Pasażer",
+      other: "Inny",
+      info: "Informacja",
+    },
   },
   en: {
     locale: "en-US",
@@ -305,6 +312,13 @@ const adminCopy = {
       dispatcher: "Dispatcher",
       admin: "Admin",
     },
+    incidentSeverityLabels: {
+      delay: "Delay",
+      technical: "Technical",
+      passenger: "Passenger",
+      other: "Other",
+      info: "Information",
+    },
   },
 };
 
@@ -358,6 +372,27 @@ function formatDateTime(value, text) {
     minute: "2-digit",
     month: "2-digit",
   });
+}
+
+function fallbackLabel(value) {
+  return String(value || "")
+    .replaceAll("_", " ")
+    .replaceAll("-", " ")
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function incidentTitle(incident, text) {
+  return (
+    incident.title ||
+    incident.type ||
+    text.incidentSeverityLabels?.[incident.severity] ||
+    fallbackLabel(incident.severity) ||
+    text.activeIncidents
+  );
+}
+
+function incidentDetail(incident) {
+  return incident.description || incident.notes || incident.note || incident.status || "-";
 }
 
 function downloadCsv(filename, rows) {
@@ -806,8 +841,8 @@ export default function AdminDashboardPage() {
       at: new Date(incident.created_at || 0).getTime() || Date.now(),
       icon: ShieldAlert,
       label: text.timelineIncident,
-      title: incident.title || incident.type || text.activeIncidents,
-      detail: incident.description || incident.notes || incident.status || "-",
+      title: incidentTitle(incident, text),
+      detail: incidentDetail(incident),
       tripId: incident.trip_id,
       tone: "danger",
     }));
