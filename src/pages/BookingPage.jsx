@@ -146,7 +146,7 @@ export default function BookingPage() {
   const total = baseTotal + extrasTotal + fee;
   const paidTotal = Number(databaseBooking?.total_amount || total);
   const displayBookingCode = databaseBooking?.booking_reference || bookingCode;
-  const ticketCode = databaseBooking?.ticket_code || displayBookingCode;
+  const ticketCode = databaseBooking?.ticket_codes?.[0] || databaseBooking?.ticket_code || displayBookingCode;
 
   const updateBuyer = (field, value) => setBuyer((b) => ({ ...b, [field]: value }));
 
@@ -186,7 +186,7 @@ export default function BookingPage() {
         tripId: selectedDeparture,
         buyer,
         passengerCount: passengers,
-        seatNumber: effectiveSeats[0],
+        seatNumbers: effectiveSeats,
         extras,
         paymentMethod,
       });

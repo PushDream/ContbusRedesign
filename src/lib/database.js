@@ -155,6 +155,7 @@ export async function createBookingRecord({
   buyer,
   passengerCount,
   seatNumber,
+  seatNumbers,
   extras,
   paymentMethod,
 }) {
@@ -167,14 +168,15 @@ export async function createBookingRecord({
   }
 
   const fullName = `${buyer.firstName || ""} ${buyer.lastName || ""}`.trim() || buyer.name;
+  const selectedSeats = (seatNumbers?.length ? seatNumbers : [seatNumber]).filter(Boolean);
 
-  const { data, error } = await supabase.rpc("create_public_booking", {
+  const { data, error } = await supabase.rpc("create_public_booking_with_seats", {
     p_trip_id: tripId,
     p_buyer_name: fullName,
     p_buyer_email: buyer.email,
     p_buyer_phone: buyer.phone,
     p_passenger_count: passengerCount,
-    p_seat_number: seatNumber,
+    p_seat_numbers: selectedSeats,
     p_luggage: Boolean(extras.luggage),
     p_insurance: Boolean(extras.insurance),
     p_payment_method: paymentMethod,
