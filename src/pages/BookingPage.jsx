@@ -261,15 +261,17 @@ export default function BookingPage() {
       </div>
 
       {step < 4 && (
-        <div className="stepper">
+        <div className="progress-stepper">
           {STEPS.map(({ n, label }, idx) => (
             <Fragment key={n}>
-              <div className={`stepper-step ${step === n ? "is-active" : ""} ${step > n ? "is-done" : ""}`}>
-                <div className="stepper-circle">{step > n ? <Check size={16} /> : n}</div>
-                <span className="stepper-label">{label}</span>
+              <div
+                className={`progress-stepper-step ${step === n ? "is-active" : ""} ${step > n ? "is-done" : ""}`}
+              >
+                <div className="progress-stepper-circle">{step > n ? <Check size={16} /> : n}</div>
+                <span className="progress-stepper-label">{label}</span>
               </div>
               {idx < STEPS.length - 1 && (
-                <div className={`stepper-line ${step > n ? "is-done" : ""}`} />
+                <div className={`progress-stepper-line ${step > n ? "is-done" : ""}`} />
               )}
             </Fragment>
           ))}

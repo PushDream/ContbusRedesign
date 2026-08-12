@@ -15,13 +15,28 @@ function getTodayDate() {
 
 const today = getTodayDate();
 
+const dateFormatLocale = { pl: "pl-PL", en: "en-GB", ua: "uk-UA" };
+const dateFormatOptions = {
+  pl: { day: "numeric", month: "long", year: "numeric" },
+  en: { day: "numeric", month: "short", year: "numeric" },
+  ua: { day: "numeric", month: "long", year: "numeric" },
+};
+
+function formatDisplayDate(value, language) {
+  if (!value) return "";
+  const locale = dateFormatLocale[language] || dateFormatLocale.en;
+  const options = dateFormatOptions[language] || dateFormatOptions.en;
+  return new Date(`${value}T00:00:00`).toLocaleDateString(locale, options);
+}
+
 export default function BookingSearch({ passengers, setPassengers }) {
-  const { t } = useApp();
+  const { t, language } = useApp();
   const navigate = useNavigate();
   const [tripType, setTripType] = useState("oneWay");
   const [from, setFrom] = useState("Lublin");
   const [to, setTo] = useState("Warszawa Marriott");
   const [date, setDate] = useState(today);
+  const [returnDate, setReturnDate] = useState(today);
 
   const swap = () => {
     setFrom(to);
@@ -74,6 +89,7 @@ export default function BookingSearch({ passengers, setPassengers }) {
         </label>
         <button aria-label={t.swapLabel} className="swap-button" onClick={swap} type="button">
           <ArrowLeftRight size={16} />
+          <span className="swap-button-label">{t.swap}</span>
         </button>
         <label>
           <span>{t.to}</span>
@@ -88,25 +104,41 @@ export default function BookingSearch({ passengers, setPassengers }) {
       <div className={tripType === "roundTrip" ? "date-grid two" : "date-grid"}>
         <label>
           <span>{t.date}</span>
-          <div className="input-shell">
+          <div className="input-shell date-input-shell">
             <CalendarDays size={18} />
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <input
+              className="date-input-native"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+            <span aria-hidden="true" className="date-display">
+              {formatDisplayDate(date, language)}
+            </span>
           </div>
         </label>
         {tripType === "roundTrip" && (
           <label>
             <span>{t.returnDate}</span>
-            <div className="input-shell">
+            <div className="input-shell date-input-shell">
               <CalendarDays size={18} />
-              <input type="date" defaultValue={today} />
+              <input
+                className="date-input-native"
+                type="date"
+                value={returnDate}
+                onChange={(e) => setReturnDate(e.target.value)}
+              />
+              <span aria-hidden="true" className="date-display">
+                {formatDisplayDate(returnDate, language)}
+              </span>
             </div>
           </label>
         )}
       </div>
 
-      <label>
+      <label className="passengers-row">
         <span>{t.passengers}</span>
-        <div className="stepper">
+        <div className="stepper compact">
           <button type="button" onClick={() => setPassengers((v) => Math.max(1, v - 1))}>
             -
           </button>
