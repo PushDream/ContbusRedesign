@@ -750,7 +750,7 @@ export default function AdminSchedulesPage() {
                   <div className="admin-trips-row" key={trip.id}>
                     <span>{new Date(`${trip.departure_date}T00:00:00`).toLocaleDateString(text.locale)}</span>
                     <strong>{timeText(trip.departure_time)}</strong>
-                    <span>{trip.routes?.code || "-"}</span>
+                    <span>{trip.route?.code || "-"}</span>
                     <select
                       disabled={!isAdmin || savingTripId === trip.id}
                       onChange={(event) => saveTripAssignment(trip.id, { driverId: event.target.value })}

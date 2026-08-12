@@ -62,8 +62,17 @@ export async function updateDeparture(id, values) {
   if ("isActive" in values) payload.is_active = values.isActive;
   if ("notes" in values) payload.notes = values.notes || null;
 
-  const { error } = await supabase.from("contbus_departures").update(payload).eq("id", id);
-  if (error) throw error;
+  const { data, error } = await supabase.from("contbus_departures").update(payload).eq("id", id).select("id");
+  if (error) {
+    console.error("updateDeparture failed", { id, payload, error });
+    throw error;
+  }
+  // RLS rejects (rather than errors on) updates that don't satisfy the admin policy,
+  // so an empty result here means the write silently no-opped.
+  if (!data || data.length === 0) {
+    console.error("updateDeparture affected 0 rows (RLS rejected or row missing)", { id, payload });
+    throw new Error("Departure update was not applied — check admin permissions.");
+  }
 }
 
 export async function deleteDeparture(id) {
@@ -104,33 +113,46 @@ export async function fetchTripAssignments(startDate, endDate) {
 
   const [
     { data: trips, error: tripsError },
+    { data: routes, error: routesError },
     { data: drivers, error: driversError },
     { data: vehicles, error: vehiclesError },
   ] = await Promise.all([
     supabase
       .from("trips")
-      .select(
-        `
-        id, departure_date, departure_time, arrival_time, status, driver_id, vehicle_id,
-        routes (code, base_price),
-        profiles:driver_id (id, full_name),
-        vehicles:vehicle_id (id, label, plate_number)
-      `,
-      )
+      .select("id, departure_date, departure_time, arrival_time, status, driver_id, vehicle_id, route_id")
       .gte("departure_date", startDate)
       .lte("departure_date", endDate)
       .order("departure_date", { ascending: true })
       .order("departure_time", { ascending: true }),
+    supabase.from("routes").select("id, code, base_price"),
     supabase.from("profiles").select("id, full_name").eq("role", "driver").order("full_name", { ascending: true }),
     supabase.from("vehicles").select("id, label, plate_number").eq("active", true).order("label", { ascending: true }),
   ]);
 
-  if (tripsError) throw tripsError;
-  if (driversError) throw driversError;
-  if (vehiclesError) throw vehiclesError;
+  if (tripsError) {
+    console.error("fetchTripAssignments: trips query failed", tripsError);
+    throw tripsError;
+  }
+  if (routesError) {
+    console.error("fetchTripAssignments: routes query failed", routesError);
+    throw routesError;
+  }
+  if (driversError) {
+    console.error("fetchTripAssignments: drivers query failed", driversError);
+    throw driversError;
+  }
+  if (vehiclesError) {
+    console.error("fetchTripAssignments: vehicles query failed", vehiclesError);
+    throw vehiclesError;
+  }
+
+  // Joined client-side (rather than via a nested Supabase select) to match the rest of
+  // the codebase's pattern (see fetchAdminOperations in database.js) and avoid relying
+  // on PostgREST's foreign-key relationship auto-detection for the embed.
+  const routeById = Object.fromEntries((routes || []).map((route) => [route.id, route]));
 
   return {
-    trips: trips || [],
+    trips: (trips || []).map((trip) => ({ ...trip, route: routeById[trip.route_id] || null })),
     drivers: drivers || [],
     vehicles: vehicles || [],
   };
