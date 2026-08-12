@@ -1,6 +1,11 @@
 import { Languages, Menu, Moon, Sun, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import { copy, logoUrl } from "../data/content.js";
+import { logoUrl } from "../data/content.js";
+
+const LANGUAGE_OPTIONS = [
+  { key: "pl", flag: "🇵🇱", label: "Polski" },
+  { key: "en", flag: "🇬🇧", label: "English" },
+];
 
 export default function Header({
   language,
@@ -59,18 +64,19 @@ export default function Header({
           {dark ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        <div className="language-switcher" aria-label={t.languageSwitcherLabel}>
+        <div className="language-switcher">
           <Languages size={16} />
-          {Object.keys(copy).map((key) => (
-            <button
-              className={language === key ? "active" : ""}
-              key={key}
-              type="button"
-              onClick={() => setLanguage(key)}
-            >
-              {copy[key].code}
-            </button>
-          ))}
+          <select
+            aria-label={t.languageSwitcherLabel}
+            value={language}
+            onChange={(event) => setLanguage(event.target.value)}
+          >
+            {LANGUAGE_OPTIONS.map(({ key, flag, label }) => (
+              <option key={key} value={key}>
+                {flag} {label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
     </header>
