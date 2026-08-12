@@ -11,7 +11,6 @@ import {
   ClipboardList,
   Download,
   Gauge,
-  Lock,
   LogOut,
   MapPin,
   RefreshCw,
@@ -31,298 +30,12 @@ import {
   updateAdminProfileRole,
   updateAdminTrip,
 } from "../lib/database.js";
-import { isSupabaseConfigured, supabase } from "../lib/supabase.js";
+import { useAdminAccess } from "../lib/useAdminAccess.js";
+import { adminCopy } from "../lib/adminCopy.js";
 import { useApp } from "../context/AppContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
-
-const adminCopy = {
-  pl: {
-    locale: "pl-PL",
-    currency: "zł",
-    supabaseMissing: "Supabase nie jest skonfigurowany dla tego wdrożenia.",
-    permissionsFailed: "Nie udało się sprawdzić uprawnień konta.",
-    dashboardLoadFailed: "Nie udało się pobrać danych dyspozytora.",
-    loginFailed: "Nie udało się zalogować.",
-    tripSaveFailed: "Nie udało się zapisać kursu.",
-    bookingSaveFailed: "Nie udało się zapisać rezerwacji.",
-    roleSaveFailed: "Nie udało się zapisać roli.",
-    bookingStatusSaved: "Status rezerwacji zapisany.",
-    profileRoleSaved: "Rola użytkownika zapisana.",
-    checkingAccessTitle: "Sprawdzanie dostępu",
-    checkingAccessBody: "Ładowanie sesji dyspozytora.",
-    operationsEyebrow: "Contbus Operacje",
-    dashboardTitle: "Panel dyspozytora",
-    loginIntro: "Zaloguj się kontem z rolą dispatcher albo admin.",
-    email: "Email",
-    password: "Hasło",
-    signingIn: "Logowanie...",
-    signIn: "Zaloguj",
-    noAccessEyebrow: "Brak dostępu",
-    noAccessTitle: "To konto nie jest dyspozytorem",
-    noAccessBody: "Poproś administratora Supabase o ustawienie roli profilu na dispatcher albo admin.",
-    logout: "Wyloguj",
-    heroBody:
-      "Dzisiejsze kursy, obłożenie i sprzedaż z tej samej bazy, której używa strona, aplikacja klienta i aplikacja kierowcy.",
-    refresh: "Odśwież",
-    aggregateWarning: "Widok sprzedaży czeka na aktywację agregatów dyspozytora w Supabase.",
-    trips: "Kursy",
-    bookings: "Rezerwacje",
-    passengers: "Pasażerowie",
-    sales: "Sprzedaż",
-    activeRoutes: "Aktywne trasy",
-    vehicles: "Pojazdy",
-    notCancelled: "bez anulowanych",
-    selectedDay: "na wybrany dzień",
-    paidDemo: "płatności testowe",
-    staffAuthHint: "po włączeniu dostępu personelu",
-    operations: "Operacje",
-    tripControl: "Sterowanie kursem",
-    dispatcherOps: "Operacje dyspozytora",
-    status: "Status",
-    vehicle: "Pojazd",
-    driver: "Kierowca",
-    platform: "Peron",
-    assignPending: "Do przypisania",
-    platformPlaceholder: "np. Peron 3",
-    tripStatusSaved: "Status kursu zapisany.",
-    vehicleAssigned: "Pojazd przypisany.",
-    driverAssigned: "Kierowca przypisany.",
-    platformSaved: "Peron zapisany.",
-    revenue: "Przychód",
-    incidents: "Incydenty",
-    tripManifest: "Manifest kursu",
-    noBookingsOnTrip: "Brak rezerwacji na tym kursie.",
-    chooseTrip: "Wybierz kurs z listy operacyjnej.",
-    search: "Wyszukiwarka",
-    searchPlaceholder: "Kod, email, nazwisko...",
-    noMatchingBookings: "Brak pasujących rezerwacji.",
-    access: "Dostęp",
-    userRoles: "Role użytkowników",
-    unnamed: "Bez nazwy",
-    today: "Dzisiaj",
-    operationalTrips: "Kursy operacyjne",
-    busiest: "Największe obłożenie:",
-    loadingTrips: "Ładowanie kursów...",
-    noTripsForDate: "Brak kursów dla tej daty.",
-    noPlatform: "Bez peronu",
-    vehicleUnassigned: "Pojazd do przypisania",
-    driverUnassigned: "Kierowca do przypisania",
-    reservationsShort: "rez.",
-    routes: "Trasy",
-    salesByRoute: "Sprzedaż wg tras",
-    routeTrips: "kursy",
-    recentBookings: "Ostatnie rezerwacje",
-    noVisibleBookings: "Brak widocznych rezerwacji.",
-    passengersShort: "pas.",
-    checkedIn: "odprawionych",
-    commandCenter: "Centrum dowodzenia",
-    commandCenterLead: "Najważniejsze ryzyka, gotowość załogi i postęp odprawy w jednym miejscu.",
-    attentionQueue: "Wymaga uwagi",
-    noAttentionItems: "Brak krytycznych zadań dla wybranego dnia.",
-    delayedTrips: "Opóźnione kursy",
-    missingVehicles: "Kursy bez pojazdu",
-    missingDrivers: "Kursy bez kierowcy",
-    missingPlatforms: "Kursy bez peronu",
-    highOccupancy: "Kursy powyżej 85% obłożenia",
-    activeIncidents: "Aktywne incydenty",
-    fixNow: "Otwórz kurs",
-    readiness: "Gotowość operacyjna",
-    checkInProgress: "Postęp odprawy",
-    fleetAssigned: "Flota przypisana",
-    driversAssigned: "Kierowcy przypisani",
-    platformReady: "Perony gotowe",
-    liveTimeline: "Oś operacyjna",
-    noTimeline: "Brak zdarzeń operacyjnych dla tego dnia.",
-    timelineTrip: "Kurs",
-    timelineBooking: "Rezerwacja",
-    timelineIncident: "Incydent",
-    timelineEvent: "Zdarzenie",
-    manifestFilter: "Filtr manifestu",
-    allPassengers: "Wszyscy",
-    uncheckedPassengers: "Do odprawy",
-    checkedPassengers: "Odprawieni",
-    exportManifest: "Eksport manifestu",
-    exportDay: "Eksport dnia",
-    manifestExported: "Manifest pobrany.",
-    dayExported: "Raport dnia pobrany.",
-    openCustomer: "Klient",
-    payment: "Płatność",
-    readinessPoor: "Wymaga reakcji",
-    readinessOk: "Pod kontrolą",
-    readinessGood: "Gotowe",
-    statusLabels: {
-      scheduled: "Planowany",
-      boarding: "Wsiadanie",
-      departed: "W drodze",
-      delayed: "Opóźniony",
-      arrived: "Zakończony",
-      cancelled: "Anulowany",
-    },
-    bookingStatusLabels: {
-      pending: "Oczekuje",
-      paid: "Opłacona",
-      cancelled: "Anulowana",
-      refunded: "Zwrócona",
-    },
-    roleLabels: {
-      customer: "Klient",
-      driver: "Kierowca",
-      dispatcher: "Dyspozytor",
-      admin: "Admin",
-    },
-    incidentSeverityLabels: {
-      delay: "Opóźnienie",
-      technical: "Techniczny",
-      passenger: "Pasażer",
-      other: "Inny",
-      info: "Informacja",
-    },
-  },
-  en: {
-    locale: "en-US",
-    currency: "PLN",
-    supabaseMissing: "Supabase is not configured for this deployment.",
-    permissionsFailed: "Could not check account permissions.",
-    dashboardLoadFailed: "Could not load dispatcher data.",
-    loginFailed: "Could not sign in.",
-    tripSaveFailed: "Could not save the trip.",
-    bookingSaveFailed: "Could not save the booking.",
-    roleSaveFailed: "Could not save the role.",
-    bookingStatusSaved: "Booking status saved.",
-    profileRoleSaved: "User role saved.",
-    checkingAccessTitle: "Checking access",
-    checkingAccessBody: "Loading dispatcher session.",
-    operationsEyebrow: "Contbus Operations",
-    dashboardTitle: "Dispatcher panel",
-    loginIntro: "Sign in with an account that has the dispatcher or admin role.",
-    email: "Email",
-    password: "Password",
-    signingIn: "Signing in...",
-    signIn: "Sign in",
-    noAccessEyebrow: "No access",
-    noAccessTitle: "This account is not a dispatcher",
-    noAccessBody: "Ask the Supabase administrator to set the profile role to dispatcher or admin.",
-    logout: "Sign out",
-    heroBody:
-      "Today's trips, occupancy, and sales from the same database used by the website, customer app, and driver app.",
-    refresh: "Refresh",
-    aggregateWarning: "The sales view is waiting for dispatcher aggregates to be activated in Supabase.",
-    trips: "Trips",
-    bookings: "Bookings",
-    passengers: "Passengers",
-    sales: "Sales",
-    activeRoutes: "Active routes",
-    vehicles: "Vehicles",
-    notCancelled: "excluding cancelled",
-    selectedDay: "for selected day",
-    paidDemo: "test payments",
-    staffAuthHint: "after staff auth is active",
-    operations: "Operations",
-    tripControl: "Trip control",
-    dispatcherOps: "Dispatcher operations",
-    status: "Status",
-    vehicle: "Vehicle",
-    driver: "Driver",
-    platform: "Platform",
-    assignPending: "Unassigned",
-    platformPlaceholder: "e.g. Platform 3",
-    tripStatusSaved: "Trip status saved.",
-    vehicleAssigned: "Vehicle assigned.",
-    driverAssigned: "Driver assigned.",
-    platformSaved: "Platform saved.",
-    revenue: "Revenue",
-    incidents: "Incidents",
-    tripManifest: "Trip manifest",
-    noBookingsOnTrip: "No bookings on this trip.",
-    chooseTrip: "Choose a trip from the operations list.",
-    search: "Search",
-    searchPlaceholder: "Code, email, surname...",
-    noMatchingBookings: "No matching bookings.",
-    access: "Access",
-    userRoles: "User roles",
-    unnamed: "Unnamed",
-    today: "Today",
-    operationalTrips: "Operational trips",
-    busiest: "Highest occupancy:",
-    loadingTrips: "Loading trips...",
-    noTripsForDate: "No trips for this date.",
-    noPlatform: "No platform",
-    vehicleUnassigned: "Vehicle unassigned",
-    driverUnassigned: "Driver unassigned",
-    reservationsShort: "res.",
-    routes: "Routes",
-    salesByRoute: "Sales by route",
-    routeTrips: "trips",
-    recentBookings: "Recent bookings",
-    noVisibleBookings: "No visible bookings.",
-    passengersShort: "pax",
-    checkedIn: "checked in",
-    commandCenter: "Command center",
-    commandCenterLead: "The key risks, crew readiness, and boarding progress in one place.",
-    attentionQueue: "Needs attention",
-    noAttentionItems: "No critical tasks for the selected day.",
-    delayedTrips: "Delayed trips",
-    missingVehicles: "Trips without vehicle",
-    missingDrivers: "Trips without driver",
-    missingPlatforms: "Trips without platform",
-    highOccupancy: "Trips above 85% occupancy",
-    activeIncidents: "Active incidents",
-    fixNow: "Open trip",
-    readiness: "Operational readiness",
-    checkInProgress: "Check-in progress",
-    fleetAssigned: "Fleet assigned",
-    driversAssigned: "Drivers assigned",
-    platformReady: "Platforms ready",
-    liveTimeline: "Operations timeline",
-    noTimeline: "No operational events for this day.",
-    timelineTrip: "Trip",
-    timelineBooking: "Booking",
-    timelineIncident: "Incident",
-    timelineEvent: "Event",
-    manifestFilter: "Manifest filter",
-    allPassengers: "All",
-    uncheckedPassengers: "To check in",
-    checkedPassengers: "Checked in",
-    exportManifest: "Export manifest",
-    exportDay: "Export day",
-    manifestExported: "Manifest downloaded.",
-    dayExported: "Day report downloaded.",
-    openCustomer: "Customer",
-    payment: "Payment",
-    readinessPoor: "Needs action",
-    readinessOk: "Under control",
-    readinessGood: "Ready",
-    statusLabels: {
-      scheduled: "Scheduled",
-      boarding: "Boarding",
-      departed: "En route",
-      delayed: "Delayed",
-      arrived: "Completed",
-      cancelled: "Cancelled",
-    },
-    bookingStatusLabels: {
-      pending: "Pending",
-      paid: "Paid",
-      cancelled: "Cancelled",
-      refunded: "Refunded",
-    },
-    roleLabels: {
-      customer: "Customer",
-      driver: "Driver",
-      dispatcher: "Dispatcher",
-      admin: "Admin",
-    },
-    incidentSeverityLabels: {
-      delay: "Delay",
-      technical: "Technical",
-      passenger: "Passenger",
-      other: "Other",
-      info: "Information",
-    },
-  },
-};
-
-adminCopy.ua = adminCopy.pl;
+import AdminNav from "../components/AdminNav.jsx";
+import AdminAuthGate from "../components/AdminAuthGate.jsx";
 
 function getTodayDate() {
   const date = new Date();
@@ -440,10 +153,6 @@ function ReadinessCard({ icon: Icon, label, value, tone }) {
   );
 }
 
-function isStaffProfile(profile) {
-  return profile?.role === "dispatcher" || profile?.role === "admin";
-}
-
 export default function AdminDashboardPage() {
   const { language } = useApp();
   const text = adminCopy[language] || adminCopy.pl;
@@ -456,103 +165,27 @@ export default function AdminDashboardPage() {
   const [operations, setOperations] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  const [authChecking, setAuthChecking] = useState(true);
-  const [profileChecking, setProfileChecking] = useState(false);
-  const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [authError, setAuthError] = useState("");
-  const [credentials, setCredentials] = useState({ email: "", password: "" });
-  const [signingIn, setSigningIn] = useState(false);
+  const {
+    authChecking,
+    profileChecking,
+    session,
+    profile,
+    authError,
+    credentials,
+    setCredentials,
+    signingIn,
+    handleSignIn,
+    handleSignOut,
+    staff,
+  } = useAdminAccess({
+    missingMessage: text.supabaseMissing,
+    permissionsFailedMessage: text.permissionsFailed,
+    loginFailedMessage: text.loginFailed,
+  });
   const [selectedTripId, setSelectedTripId] = useState("");
   const [bookingQuery, setBookingQuery] = useState("");
   const [manifestFilter, setManifestFilter] = useState("all");
   const [savingKey, setSavingKey] = useState("");
-
-  useEffect(() => {
-    let active = true;
-
-    if (!isSupabaseConfigured) {
-      queueMicrotask(() => {
-        if (!active) return;
-        setAuthError(text.supabaseMissing);
-        setAuthChecking(false);
-        setLoading(false);
-      });
-      return () => {
-        active = false;
-      };
-    }
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      setSession(data.session);
-      setAuthChecking(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setProfile(null);
-      setOverview(null);
-    });
-
-    return () => {
-      active = false;
-      subscription.unsubscribe();
-    };
-  }, [text.supabaseMissing]);
-
-  useEffect(() => {
-    let active = true;
-
-    if (!isSupabaseConfigured) {
-      queueMicrotask(() => {
-        if (!active) return;
-        setProfile(null);
-        setProfileChecking(false);
-        setLoading(false);
-      });
-      return () => {
-        active = false;
-      };
-    }
-
-    if (!session) {
-      queueMicrotask(() => {
-        if (!active) return;
-        setProfile(null);
-        setProfileChecking(false);
-        setLoading(false);
-      });
-      return () => {
-        active = false;
-      };
-    }
-
-    queueMicrotask(() => {
-      if (active) setProfileChecking(true);
-    });
-    supabase
-      .from("profiles")
-      .select("role, full_name")
-      .eq("id", session.user.id)
-      .single()
-      .then(({ data, error }) => {
-        if (!active) return;
-        setProfile(error ? null : data);
-        setAuthError(error ? text.permissionsFailed : "");
-      })
-      .finally(() => {
-        if (active) setProfileChecking(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [session, text.permissionsFailed]);
-
-  const staff = isStaffProfile(profile);
 
   const loadDashboard = useCallback(async () => {
     if (!staff) return;
@@ -614,26 +247,6 @@ export default function AdminDashboardPage() {
       active = false;
     };
   }, [date, staff, text.dashboardLoadFailed]);
-
-  const handleSignIn = async (event) => {
-    event.preventDefault();
-    if (!isSupabaseConfigured) {
-      setAuthError(text.supabaseMissing);
-      return;
-    }
-    setSigningIn(true);
-    setAuthError("");
-    const { error } = await supabase.auth.signInWithPassword(credentials);
-    if (error) {
-      setAuthError(error.message || text.loginFailed);
-    }
-    setSigningIn(false);
-  };
-
-  const handleSignOut = () => {
-    if (!isSupabaseConfigured) return;
-    supabase.auth.signOut();
-  };
 
   const summary = overview?.summary || {};
   const trips = useMemo(() => overview?.trips || [], [overview]);
@@ -913,72 +526,22 @@ export default function AdminDashboardPage() {
     notify(text.dayExported, "success");
   };
 
-  if (authChecking || profileChecking) {
-    return (
-      <div className="admin-auth-page">
-        <div className="admin-auth-card">
-          <span className="spinner large" aria-hidden="true" />
-          <h1>{text.checkingAccessTitle}</h1>
-          <p>{text.checkingAccessBody}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return (
-      <div className="admin-auth-page">
-        <form className="admin-auth-card" onSubmit={handleSignIn}>
-          <Lock size={24} />
-          <p className="eyebrow">{text.operationsEyebrow}</p>
-          <h1>{text.dashboardTitle}</h1>
-          <p>{text.loginIntro}</p>
-          <label>
-            <span>{text.email}</span>
-            <input
-              autoComplete="email"
-              type="email"
-              value={credentials.email}
-              onChange={(event) => setCredentials((current) => ({ ...current, email: event.target.value }))}
-            />
-          </label>
-          <label>
-            <span>{text.password}</span>
-            <input
-              autoComplete="current-password"
-              type="password"
-              value={credentials.password}
-              onChange={(event) => setCredentials((current) => ({ ...current, password: event.target.value }))}
-            />
-          </label>
-          {authError && <div className="admin-auth-error">{authError}</div>}
-          <button className="primary-button full" disabled={signingIn} type="submit">
-            {signingIn ? text.signingIn : text.signIn}
-          </button>
-        </form>
-      </div>
-    );
-  }
-
-  if (!staff) {
-    return (
-      <div className="admin-auth-page">
-        <div className="admin-auth-card">
-          <AlertTriangle size={24} />
-          <p className="eyebrow">{text.noAccessEyebrow}</p>
-          <h1>{text.noAccessTitle}</h1>
-          <p>{text.noAccessBody}</p>
-          {authError && <div className="admin-auth-error">{authError}</div>}
-          <button className="secondary-button full" onClick={handleSignOut} type="button">
-            <LogOut size={17} />
-            {text.logout}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
+    <AdminAuthGate
+      authChecking={authChecking}
+      profileChecking={profileChecking}
+      session={session}
+      staff={staff}
+      authError={authError}
+      credentials={credentials}
+      setCredentials={setCredentials}
+      signingIn={signingIn}
+      handleSignIn={handleSignIn}
+      handleSignOut={handleSignOut}
+      text={text}
+      title={text.dashboardTitle}
+    >
+      {() => (
     <div className="admin-page">
       <section className="admin-hero">
         <div>
@@ -1015,6 +578,8 @@ export default function AdminDashboardPage() {
           </button>
         </div>
       </section>
+
+      <AdminNav active="dashboard" text={text} />
 
       {overview?.isAggregateFallback && (
         <div className="admin-alert">
@@ -1549,5 +1114,7 @@ export default function AdminDashboardPage() {
         </aside>
       </section>
     </div>
+      )}
+    </AdminAuthGate>
   );
 }
