@@ -5,6 +5,7 @@ import { logoUrl } from "../data/content.js";
 const LANGUAGE_OPTIONS = [
   { key: "pl", flag: "🇵🇱", label: "Polski" },
   { key: "en", flag: "🇬🇧", label: "English" },
+  { key: "ua", flag: "🇺🇦", label: "Українська" },
 ];
 
 export default function Header({
