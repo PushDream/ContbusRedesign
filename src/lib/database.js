@@ -599,8 +599,11 @@ export async function updateAdminTrip(tripId, values) {
   if ("status" in values) payload.status = values.status;
   if ("vehicle_id" in values) payload.vehicle_id = values.vehicle_id || null;
 
-  const { error } = await supabase.from("trips").update(payload).eq("id", tripId);
+  const { data, error } = await supabase.from("trips").update(payload).eq("id", tripId).select("id");
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error("Trip update was not applied — check admin permissions.");
+  }
 }
 
 export async function updateAdminBookingStatus(bookingId, status) {
@@ -608,8 +611,11 @@ export async function updateAdminBookingStatus(bookingId, status) {
     throw new Error("Supabase is not configured for this deployment.");
   }
 
-  const { error } = await supabase.from("bookings").update({ status }).eq("id", bookingId);
+  const { data, error } = await supabase.from("bookings").update({ status }).eq("id", bookingId).select("id");
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error("Booking status update was not applied — check admin permissions.");
+  }
 }
 
 export async function updateAdminProfileRole(profileId, role) {

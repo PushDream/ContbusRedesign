@@ -40,16 +40,22 @@ export async function fetchScheduleData() {
 
 export async function createDeparture(values) {
   ensureConfigured();
-  const { error } = await supabase.from("contbus_departures").insert({
-    route_id: values.routeId,
-    departure_time: values.departureTime,
-    direction: values.direction,
-    days_of_week: values.daysOfWeek,
-    trip_type: values.tripType || "regular",
-    is_active: values.isActive ?? true,
-    notes: values.notes || null,
-  });
+  const { data, error } = await supabase
+    .from("contbus_departures")
+    .insert({
+      route_id: values.routeId,
+      departure_time: values.departureTime,
+      direction: values.direction,
+      days_of_week: values.daysOfWeek,
+      trip_type: values.tripType || "regular",
+      is_active: values.isActive ?? true,
+      notes: values.notes || null,
+    })
+    .select("id");
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error("Departure was not created — check admin permissions.");
+  }
 }
 
 export async function updateDeparture(id, values) {
@@ -77,8 +83,11 @@ export async function updateDeparture(id, values) {
 
 export async function deleteDeparture(id) {
   ensureConfigured();
-  const { error } = await supabase.from("contbus_departures").delete().eq("id", id);
+  const { data, error } = await supabase.from("contbus_departures").delete().eq("id", id).select("id");
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error("Departure was not deleted — check admin permissions.");
+  }
 }
 
 export async function updateStop(id, values) {
@@ -88,14 +97,24 @@ export async function updateStop(id, values) {
   if ("city" in values) payload.city = values.city;
   if ("address" in values) payload.address = values.address;
 
-  const { error } = await supabase.from("contbus_stops").update(payload).eq("id", id);
+  const { data, error } = await supabase.from("contbus_stops").update(payload).eq("id", id).select("id");
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error("Stop update was not applied — check admin permissions.");
+  }
 }
 
 export async function updateFarePrice(id, pricePln) {
   ensureConfigured();
-  const { error } = await supabase.from("contbus_fares").update({ price_pln: pricePln }).eq("id", id);
+  const { data, error } = await supabase
+    .from("contbus_fares")
+    .update({ price_pln: pricePln })
+    .eq("id", id)
+    .select("id");
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error("Fare update was not applied — check admin permissions.");
+  }
 }
 
 export async function generateContbusTrips(startDate, endDate) {
@@ -164,6 +183,9 @@ export async function updateTripAssignment(tripId, values) {
   if ("driverId" in values) payload.driver_id = values.driverId || null;
   if ("vehicleId" in values) payload.vehicle_id = values.vehicleId || null;
 
-  const { error } = await supabase.from("trips").update(payload).eq("id", tripId);
+  const { data, error } = await supabase.from("trips").update(payload).eq("id", tripId).select("id");
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error("Trip assignment was not applied — check admin permissions.");
+  }
 }

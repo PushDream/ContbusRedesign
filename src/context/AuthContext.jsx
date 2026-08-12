@@ -136,8 +136,10 @@ export function AuthProvider({ children }) {
       .select("role, full_name, phone")
       .eq("id", session.user.id)
       .single()
-      .then(({ data }) => {
-        if (active) setProfile(data || null);
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) console.error("AuthContext: profile fetch failed", error);
+        setProfile(data || null);
       });
 
     return () => {
@@ -176,11 +178,15 @@ export function AuthProvider({ children }) {
         });
 
         if (!result.error && result.data?.session && result.data?.user) {
-          await supabase.from("profiles").upsert({
+          const { error: profileError } = await supabase.from("profiles").upsert({
             id: result.data.user.id,
             full_name: fullName,
             phone,
           });
+          if (profileError) {
+            console.error("signUp: profile upsert failed", profileError);
+            return { ...result, error: profileError };
+          }
         }
 
         return result;
