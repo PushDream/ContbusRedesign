@@ -2986,7 +2986,8 @@ h3 {
 /* ---------- Trip type / from-to / date grid ---------- */
 
 .trip-type {
-  display: inline-flex;
+  display: flex;
+  width: 100%;
   gap: 4px;
   padding: 4px;
   background: var(--surface-muted);
@@ -2994,6 +2995,8 @@ h3 {
 }
 
 .trip-type button {
+  flex: 1;
+  width: 50%;
   min-height: 44px;
   padding: 0 14px;
   color: var(--text-soft);
@@ -3002,6 +3005,7 @@ h3 {
   border-radius: 6px;
   font-size: 0.8rem;
   font-weight: 850;
+  text-align: center;
 }
 
 .trip-type button.active {
@@ -3062,10 +3066,17 @@ h3 {
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
+  overflow: hidden;
 }
 
 .date-grid.two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 680px) {
+  .date-grid.two {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ---------- Routes filter bar ---------- */
