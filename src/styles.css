@@ -89,11 +89,13 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
   min-width: 320px;
+  overflow-x: hidden;
   background: var(--bg);
 }
 
@@ -101,6 +103,19 @@ button,
 input,
 select {
   font: inherit;
+}
+
+/*
+  Many inputs/selects are direct children of <label> elements that set a
+  small uppercase caption font-size (for the label text). Because form
+  controls above use `font: inherit`, they were inheriting that same small
+  size instead of the page's base size — under 16px, which makes iOS Safari
+  zoom the viewport on focus. Force a readable, non-zooming floor here.
+*/
+input,
+select,
+textarea {
+  font-size: 1rem;
 }
 
 button,
@@ -1211,7 +1226,7 @@ h3 {
 }
 
 .ticket-links a {
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 12px;
   color: #14210f;
   background: #7bbf2a;
@@ -1649,7 +1664,7 @@ h3 {
 .admin-icon-button,
 .admin-segmented button,
 .admin-timeline-item {
-  min-height: 38px;
+  min-height: 44px;
   border: 0;
   cursor: pointer;
   font: inherit;
@@ -2079,7 +2094,7 @@ h3 {
 .admin-icon-button {
   display: grid;
   place-items: center;
-  width: 40px;
+  width: 44px;
   color: var(--brand-dark);
   background: var(--brand-soft-bg);
   border-radius: 8px;
@@ -2316,7 +2331,7 @@ h3 {
 }
 
 .account-tabs button {
-  min-height: 42px;
+  min-height: 44px;
   color: var(--text-muted);
   background: transparent;
   border: 0;
@@ -2758,7 +2773,10 @@ h3 {
   }
 
   .nav a {
-    padding: 12px;
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 12px;
   }
 
   .hero-inner,
@@ -2811,8 +2829,8 @@ h3 {
   }
 
   .icon-button {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
   }
 
   .language-switcher {
@@ -2854,7 +2872,8 @@ h3 {
   .departure-grid,
   .payment-methods,
   .form-grid,
-  .download-panel {
+  .download-panel,
+  .date-grid.two {
     grid-template-columns: 1fr;
   }
 
@@ -2917,7 +2936,7 @@ h3 {
 }
 
 .trip-type button {
-  min-height: 34px;
+  min-height: 44px;
   padding: 0 14px;
   color: var(--text-soft);
   background: transparent;
@@ -2990,7 +3009,7 @@ h3 {
 }
 
 .sort-group button {
-  min-height: 34px;
+  min-height: 44px;
   padding: 0 12px;
   color: var(--text-soft);
   background: var(--surface-muted);
@@ -3694,8 +3713,10 @@ h3 {
     grid-template-columns: repeat(5, 1fr);
   }
 
-  .seat {
+  .seat,
+  .seat-aisle {
     width: 100%;
+    height: 44px;
   }
 
   .extras-grid {
@@ -5043,7 +5064,7 @@ a.contact-big-value:hover {
 }
 
 .admin-tabs button {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 18px;
   color: var(--text-muted);
   background: transparent;
@@ -5063,7 +5084,7 @@ a.contact-big-value:hover {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 14px;
   color: #ffffff;
   background: var(--brand);
@@ -5445,14 +5466,14 @@ a.contact-big-value:hover {
 }
 
 .admin-trips-row select {
-  min-height: 36px;
+  min-height: 44px;
   width: 100%;
   padding: 0 8px;
   color: var(--text-strong);
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 7px;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   font-weight: 700;
 }
 
@@ -5614,7 +5635,7 @@ a.contact-big-value:hover {
   }
 
   .admin-trips-row {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .admin-trips-row.header {
