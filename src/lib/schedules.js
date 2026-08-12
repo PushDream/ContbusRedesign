@@ -98,3 +98,50 @@ export async function generateContbusTrips(startDate, endDate) {
   if (error) throw error;
   return Number(data) || 0;
 }
+
+export async function fetchTripAssignments(startDate, endDate) {
+  ensureConfigured();
+
+  const [
+    { data: trips, error: tripsError },
+    { data: drivers, error: driversError },
+    { data: vehicles, error: vehiclesError },
+  ] = await Promise.all([
+    supabase
+      .from("trips")
+      .select(
+        `
+        id, departure_date, departure_time, arrival_time, status, driver_id, vehicle_id,
+        routes (code, base_price),
+        profiles:driver_id (id, full_name),
+        vehicles:vehicle_id (id, label, plate_number)
+      `,
+      )
+      .gte("departure_date", startDate)
+      .lte("departure_date", endDate)
+      .order("departure_date", { ascending: true })
+      .order("departure_time", { ascending: true }),
+    supabase.from("profiles").select("id, full_name").eq("role", "driver").order("full_name", { ascending: true }),
+    supabase.from("vehicles").select("id, label, plate_number").eq("active", true).order("label", { ascending: true }),
+  ]);
+
+  if (tripsError) throw tripsError;
+  if (driversError) throw driversError;
+  if (vehiclesError) throw vehiclesError;
+
+  return {
+    trips: trips || [],
+    drivers: drivers || [],
+    vehicles: vehicles || [],
+  };
+}
+
+export async function updateTripAssignment(tripId, values) {
+  ensureConfigured();
+  const payload = {};
+  if ("driverId" in values) payload.driver_id = values.driverId || null;
+  if ("vehicleId" in values) payload.vehicle_id = values.vehicleId || null;
+
+  const { error } = await supabase.from("trips").update(payload).eq("id", tripId);
+  if (error) throw error;
+}

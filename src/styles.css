@@ -5403,6 +5403,66 @@ a.contact-big-value:hover {
   font-weight: 900;
 }
 
+.admin-trips-filter {
+  margin-bottom: 4px;
+}
+
+.admin-trips-table {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.admin-trips-row {
+  display: grid;
+  grid-template-columns: 100px 70px 90px 1fr 1fr 110px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.84rem;
+}
+
+.admin-trips-row.header {
+  padding: 0 12px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.admin-trips-row strong {
+  color: var(--text-strong);
+  font-size: 0.92rem;
+}
+
+.admin-trips-row select {
+  min-height: 36px;
+  width: 100%;
+  padding: 0 8px;
+  color: var(--text-strong);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.admin-trips-row select:focus {
+  border-color: var(--brand);
+  outline: 0;
+}
+
+.admin-trips-row select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .admin-modal-overlay {
   position: fixed;
   inset: 0;
@@ -5548,5 +5608,13 @@ a.contact-big-value:hover {
 
   .admin-stop-fields {
     grid-template-columns: 1fr;
+  }
+
+  .admin-trips-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-trips-row.header {
+    display: none;
   }
 }

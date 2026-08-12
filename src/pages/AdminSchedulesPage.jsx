@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CalendarClock, Plus, RefreshCw, Sparkles, Trash2, X } from "lucide-react";
+import { AlertTriangle, Bus, CalendarClock, Plus, RefreshCw, Sparkles, Trash2, X } from "lucide-react";
 import {
   createDeparture,
   deleteDeparture,
   fetchScheduleData,
+  fetchTripAssignments,
   generateContbusTrips,
   updateDeparture,
   updateFarePrice,
   updateStop,
+  updateTripAssignment,
 } from "../lib/schedules.js";
 import { useAdminAccess } from "../lib/useAdminAccess.js";
 import { adminCopy } from "../lib/adminCopy.js";
@@ -123,10 +125,31 @@ export default function AdminSchedulesPage() {
   const [generateEnd, setGenerateEnd] = useState(() => addDays(todayDateOnly(), 60));
   const [generating, setGenerating] = useState(false);
 
+  const [tripFilterStart, setTripFilterStart] = useState(() => todayDateOnly());
+  const [tripFilterEnd, setTripFilterEnd] = useState(() => addDays(todayDateOnly(), 30));
+  const [tripAssignments, setTripAssignments] = useState({ trips: [], drivers: [], vehicles: [] });
+  const [tripsLoading, setTripsLoading] = useState(true);
+  const [tripsError, setTripsError] = useState("");
+  const [savingTripId, setSavingTripId] = useState("");
+
   const reload = useCallback(async () => {
     const data = await fetchScheduleData();
     setSchedule(data);
   }, []);
+
+  const reloadTrips = useCallback(async () => {
+    if (!tripFilterStart || !tripFilterEnd || tripFilterStart > tripFilterEnd) return;
+    setTripsLoading(true);
+    try {
+      const data = await fetchTripAssignments(tripFilterStart, tripFilterEnd);
+      setTripAssignments(data);
+      setTripsError("");
+    } catch (error) {
+      setTripsError(error.message || text.tripsLoadFailed);
+    } finally {
+      setTripsLoading(false);
+    }
+  }, [tripFilterStart, tripFilterEnd, text.tripsLoadFailed]);
 
   useEffect(() => {
     let active = true;
@@ -158,6 +181,38 @@ export default function AdminSchedulesPage() {
       active = false;
     };
   }, [staff, text.scheduleLoadFailed]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!staff) {
+      queueMicrotask(() => {
+        if (active) setTripsLoading(false);
+      });
+      return () => {
+        active = false;
+      };
+    }
+
+    fetchTripAssignments(tripFilterStart, tripFilterEnd)
+      .then((data) => {
+        if (active) {
+          setTripAssignments(data);
+          setTripsError("");
+        }
+      })
+      .catch((error) => {
+        if (active) setTripsError(error.message || text.tripsLoadFailed);
+      })
+      .finally(() => {
+        if (active) setTripsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staff, text.tripsLoadFailed]);
 
   const stops = useMemo(() => schedule?.stops || [], [schedule]);
   const routes = useMemo(() => schedule?.routes || [], [schedule]);
@@ -199,6 +254,23 @@ export default function AdminSchedulesPage() {
       })
       .filter(Boolean);
   }, [routes, text]);
+
+  const trips = tripAssignments.trips;
+  const tripDrivers = tripAssignments.drivers;
+  const tripVehicles = tripAssignments.vehicles;
+
+  const saveTripAssignment = async (tripId, values) => {
+    setSavingTripId(tripId);
+    try {
+      await updateTripAssignment(tripId, values);
+      await reloadTrips();
+      notify(text.tripAssignSaved, "success");
+    } catch (error) {
+      notify(error.message || text.tripAssignFailed, "error");
+    } finally {
+      setSavingTripId("");
+    }
+  };
 
   const runAction = async (key, action, successMessage, failureMessage) => {
     setSavingKey(key);
@@ -360,6 +432,7 @@ export default function AdminSchedulesPage() {
             ["departures", text.tabDepartures],
             ["stops", text.tabStops],
             ["fares", text.tabFares],
+            ["trips", text.tabTrips],
           ].map(([value, label]) => (
             <button
               className={activeTab === value ? "active" : ""}
@@ -607,6 +680,108 @@ export default function AdminSchedulesPage() {
                 </tbody>
               </table>
             </div>
+          </section>
+        )}
+
+        {activeTab === "trips" && (
+          <section className="admin-panel">
+            <div className="admin-panel-header">
+              <div>
+                <p className="eyebrow">{text.dispatcherOps}</p>
+                <h2>{text.tabTrips}</h2>
+              </div>
+              <Bus size={18} />
+            </div>
+
+            <div className="admin-generate-fields admin-trips-filter">
+              <label>
+                <span>{text.dateFrom}</span>
+                <input
+                  disabled={tripsLoading}
+                  onChange={(event) => setTripFilterStart(event.target.value)}
+                  type="date"
+                  value={tripFilterStart}
+                />
+              </label>
+              <label>
+                <span>{text.dateTo}</span>
+                <input
+                  disabled={tripsLoading}
+                  onChange={(event) => setTripFilterEnd(event.target.value)}
+                  type="date"
+                  value={tripFilterEnd}
+                />
+              </label>
+              <button
+                className="secondary-button"
+                disabled={tripsLoading || !tripFilterStart || !tripFilterEnd || tripFilterStart > tripFilterEnd}
+                onClick={reloadTrips}
+                type="button"
+              >
+                <RefreshCw size={16} />
+                {text.refresh}
+              </button>
+            </div>
+
+            {tripsError && (
+              <div className="admin-alert danger">
+                <AlertTriangle size={18} />
+                <span>{tripsError}</span>
+              </div>
+            )}
+
+            {tripsLoading ? (
+              <p className="admin-empty loading-row">
+                <span className="spinner" aria-hidden="true" />
+                {text.loadingTrips}
+              </p>
+            ) : (
+              <div className="admin-trips-table">
+                <div className="admin-trips-row header">
+                  <span>{text.tripDate}</span>
+                  <span>{text.tripTime}</span>
+                  <span>{text.tripRoute}</span>
+                  <span>{text.driver}</span>
+                  <span>{text.vehicle}</span>
+                  <span>{text.status}</span>
+                </div>
+                {trips.length === 0 && <p className="admin-empty">{text.noTrips}</p>}
+                {trips.map((trip) => (
+                  <div className="admin-trips-row" key={trip.id}>
+                    <span>{new Date(`${trip.departure_date}T00:00:00`).toLocaleDateString(text.locale)}</span>
+                    <strong>{timeText(trip.departure_time)}</strong>
+                    <span>{trip.routes?.code || "-"}</span>
+                    <select
+                      disabled={!isAdmin || savingTripId === trip.id}
+                      onChange={(event) => saveTripAssignment(trip.id, { driverId: event.target.value })}
+                      value={trip.driver_id || ""}
+                    >
+                      <option value="">{text.assignPending}</option>
+                      {tripDrivers.map((driver) => (
+                        <option key={driver.id} value={driver.id}>
+                          {driver.full_name || driver.id}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      disabled={!isAdmin || savingTripId === trip.id}
+                      onChange={(event) => saveTripAssignment(trip.id, { vehicleId: event.target.value })}
+                      value={trip.vehicle_id || ""}
+                    >
+                      <option value="">{text.assignPending}</option>
+                      {tripVehicles.map((vehicle) => (
+                        <option key={vehicle.id} value={vehicle.id}>
+                          {vehicle.label} · {vehicle.plate_number}
+                        </option>
+                      ))}
+                    </select>
+                    <span className={`admin-status ${trip.status}`}>
+                      {text.statusLabels[trip.status] || trip.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
