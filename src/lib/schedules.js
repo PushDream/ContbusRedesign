@@ -88,3 +88,13 @@ export async function updateFarePrice(id, pricePln) {
   const { error } = await supabase.from("contbus_fares").update({ price_pln: pricePln }).eq("id", id);
   if (error) throw error;
 }
+
+export async function generateContbusTrips(startDate, endDate) {
+  ensureConfigured();
+  const { data, error } = await supabase.rpc("generate_contbus_trips", {
+    p_start_date: startDate,
+    p_end_date: endDate,
+  });
+  if (error) throw error;
+  return Number(data) || 0;
+}

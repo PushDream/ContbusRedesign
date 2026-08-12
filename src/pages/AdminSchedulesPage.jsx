@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CalendarClock, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { AlertTriangle, CalendarClock, Plus, RefreshCw, Sparkles, Trash2, X } from "lucide-react";
 import {
   createDeparture,
   deleteDeparture,
   fetchScheduleData,
+  generateContbusTrips,
   updateDeparture,
   updateFarePrice,
   updateStop,
@@ -44,6 +45,23 @@ function daysUntil(dateOnly) {
   today.setHours(0, 0, 0, 0);
   const target = new Date(`${dateOnly}T00:00:00`);
   return Math.round((target.getTime() - today.getTime()) / 86400000);
+}
+
+function dateOnly(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function todayDateOnly() {
+  return dateOnly(new Date());
+}
+
+function addDays(value, days) {
+  const date = new Date(`${value}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return dateOnly(date);
 }
 
 function DaysPicker({ value, onToggle, text, disabled }) {
@@ -101,6 +119,9 @@ export default function AdminSchedulesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState(() => emptyDepartureForm("lublin_warszawa"));
+  const [generateStart, setGenerateStart] = useState(() => todayDateOnly());
+  const [generateEnd, setGenerateEnd] = useState(() => addDays(todayDateOnly(), 60));
+  const [generating, setGenerating] = useState(false);
 
   const reload = useCallback(async () => {
     const data = await fetchScheduleData();
@@ -251,6 +272,19 @@ export default function AdminSchedulesPage() {
     }
   };
 
+  const handleGenerateTrips = async () => {
+    if (!isAdmin || !generateStart || !generateEnd || generateStart > generateEnd) return;
+    setGenerating(true);
+    try {
+      const count = await generateContbusTrips(generateStart, generateEnd);
+      notify(count > 0 ? text.generateSuccess.replace("{count}", count) : text.generateNoNew, "success");
+    } catch (error) {
+      notify(error.message || text.generateFailed, "error");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const confirmDeleteDeparture = async () => {
     if (!pendingDelete) return;
     await runAction(
@@ -353,6 +387,45 @@ export default function AdminSchedulesPage() {
                 <h2>{text.tabDepartures}</h2>
               </div>
               <CalendarClock size={18} />
+            </div>
+
+            <div className="admin-generate-panel">
+              <div className="admin-generate-header">
+                <Sparkles size={16} />
+                <div>
+                  <h3>{text.generateTrips}</h3>
+                  <p>{text.generateHint}</p>
+                </div>
+              </div>
+              <div className="admin-generate-fields">
+                <label>
+                  <span>{text.generateStartDate}</span>
+                  <input
+                    disabled={!isAdmin || generating}
+                    onChange={(event) => setGenerateStart(event.target.value)}
+                    type="date"
+                    value={generateStart}
+                  />
+                </label>
+                <label>
+                  <span>{text.generateEndDate}</span>
+                  <input
+                    disabled={!isAdmin || generating}
+                    onChange={(event) => setGenerateEnd(event.target.value)}
+                    type="date"
+                    value={generateEnd}
+                  />
+                </label>
+                <button
+                  className="primary-button admin-generate-button"
+                  disabled={!isAdmin || generating || !generateStart || !generateEnd || generateStart > generateEnd}
+                  onClick={handleGenerateTrips}
+                  title={!isAdmin ? text.adminOnlyHint : undefined}
+                  type="button"
+                >
+                  {generating ? text.generating : text.generateButton}
+                </button>
+              </div>
             </div>
 
             {DIRECTIONS.map((direction) => (
