@@ -223,6 +223,10 @@ export default function AdminDashboardPage() {
       };
     }
 
+    queueMicrotask(() => {
+      if (active) setLoading(true);
+    });
+
     Promise.all([fetchDispatcherOverview(date), fetchAdminOperations(date)])
       .then(([nextOverview, nextOperations]) => {
         if (!active) return;

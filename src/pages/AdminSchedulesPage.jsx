@@ -163,6 +163,10 @@ export default function AdminSchedulesPage() {
       };
     }
 
+    queueMicrotask(() => {
+      if (active) setLoading(true);
+    });
+
     fetchScheduleData()
       .then((data) => {
         if (active) {
@@ -193,6 +197,10 @@ export default function AdminSchedulesPage() {
         active = false;
       };
     }
+
+    queueMicrotask(() => {
+      if (active) setTripsLoading(true);
+    });
 
     fetchTripAssignments(tripFilterStart, tripFilterEnd)
       .then((data) => {
