@@ -305,10 +305,18 @@ export default function AdminSchedulesPage() {
     try {
       const savedDeparture = await updateDeparture(departure.id, { isActive: nextActive });
       patchDepartureInSchedule(departure.id, savedDeparture);
-      await Promise.all([reload(), reloadTrips()]);
       notify(text.departureSaved, "success");
     } catch (error) {
       patchDepartureInSchedule(departure.id, { is_active: departure.is_active });
+      notify(error.message || text.scheduleLoadFailed, "error");
+      setSavingKey("");
+      return;
+    }
+
+    try {
+      await reload();
+      await reloadTrips();
+    } catch (error) {
       notify(error.message || text.scheduleLoadFailed, "error");
     } finally {
       setSavingKey("");
