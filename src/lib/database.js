@@ -20,6 +20,17 @@ function timeText(value) {
   return String(value || "").slice(0, 5);
 }
 
+function isoDayOfWeek(value) {
+  const day = new Date(`${value}T00:00:00`).getDay();
+  return day === 0 ? 7 : day;
+}
+
+function contbusDirectionForRoute(originCode, destinationCode) {
+  if (originCode?.startsWith("LUB-") && !destinationCode?.startsWith("LUB-")) return "lublin_warszawa";
+  if (!originCode?.startsWith("LUB-") && destinationCode?.startsWith("LUB-")) return "warszawa_lublin";
+  return "";
+}
+
 function durationLabel(minutes) {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
@@ -96,6 +107,7 @@ export async function fetchDepartures({ from, to, date }) {
   const originCode = stationCodeByName[from];
   const destinationCode = stationCodeByName[to];
   const departureDate = toDateOnly(date);
+  const timetableDirection = contbusDirectionForRoute(originCode, destinationCode);
 
   if (!originCode || !destinationCode || originCode === destinationCode) {
     return [];
@@ -109,6 +121,7 @@ export async function fetchDepartures({ from, to, date }) {
     { data: stations, error: stationsError },
     { data: routes, error: routesError },
     { data: trips, error: tripsError },
+    activeTimetableResult,
   ] = await Promise.all([
     supabase.from("stations").select("*").in("code", [originCode, destinationCode]),
     supabase.from("routes").select("*").eq("active", true),
@@ -118,11 +131,21 @@ export async function fetchDepartures({ from, to, date }) {
       .eq("departure_date", departureDate)
       .neq("status", "cancelled")
       .order("departure_time", { ascending: true }),
+    timetableDirection
+      ? supabase
+          .from("contbus_departures")
+          .select("departure_time, days_of_week")
+          .eq("is_active", true)
+          .eq("direction", timetableDirection)
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   if (stationsError) throw stationsError;
   if (routesError) throw routesError;
   if (tripsError) throw tripsError;
+  if (activeTimetableResult.error && activeTimetableResult.error.code !== "42P01") {
+    throw activeTimetableResult.error;
+  }
 
   const stationByCode = Object.fromEntries((stations || []).map((station) => [station.code, station]));
   const route = (routes || []).find(
@@ -133,8 +156,18 @@ export async function fetchDepartures({ from, to, date }) {
 
   if (!route) return [];
 
+  const dayOfWeek = isoDayOfWeek(departureDate);
+  const activeTimes = !timetableDirection || activeTimetableResult.error
+    ? null
+    : new Set(
+        (activeTimetableResult.data || [])
+          .filter((departure) => (departure.days_of_week || []).includes(dayOfWeek))
+          .map((departure) => timeText(departure.departure_time)),
+      );
+
   return (trips || [])
     .filter((trip) => trip.route_id === route.id)
+    .filter((trip) => !activeTimes || activeTimes.has(timeText(trip.departure_time)))
     .map((trip) =>
       mapDbDeparture({
         trip,

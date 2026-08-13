@@ -259,6 +259,18 @@ export default function AdminSchedulesPage() {
   const tripDrivers = tripAssignments.drivers;
   const tripVehicles = tripAssignments.vehicles;
 
+  const patchDepartureInSchedule = useCallback((departureId, values) => {
+    setSchedule((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        departures: current.departures.map((departure) =>
+          departure.id === departureId ? { ...departure, ...values } : departure,
+        ),
+      };
+    });
+  }, []);
+
   const saveTripAssignment = async (tripId, values) => {
     setSavingTripId(tripId);
     try {
@@ -285,13 +297,23 @@ export default function AdminSchedulesPage() {
     }
   };
 
-  const toggleDepartureActive = (departure) =>
-    runAction(
-      `departure-${departure.id}`,
-      () => updateDeparture(departure.id, { isActive: !departure.is_active }),
-      text.departureSaved,
-      text.scheduleLoadFailed,
-    );
+  const toggleDepartureActive = async (departure) => {
+    const key = `departure-${departure.id}`;
+    const nextActive = !departure.is_active;
+    setSavingKey(key);
+    patchDepartureInSchedule(departure.id, { is_active: nextActive });
+    try {
+      const savedDeparture = await updateDeparture(departure.id, { isActive: nextActive });
+      patchDepartureInSchedule(departure.id, savedDeparture);
+      await Promise.all([reload(), reloadTrips()]);
+      notify(text.departureSaved, "success");
+    } catch (error) {
+      patchDepartureInSchedule(departure.id, { is_active: departure.is_active });
+      notify(error.message || text.scheduleLoadFailed, "error");
+    } finally {
+      setSavingKey("");
+    }
+  };
 
   const saveStopField = (stopId, values) =>
     runAction(`stop-${stopId}`, () => updateStop(stopId, values), text.stopSaved, text.stopSaveFailed);

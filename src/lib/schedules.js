@@ -68,7 +68,26 @@ export async function updateDeparture(id, values) {
   if ("isActive" in values) payload.is_active = values.isActive;
   if ("notes" in values) payload.notes = values.notes || null;
 
-  const { data, error } = await supabase.from("contbus_departures").update(payload).eq("id", id).select("id");
+  const keys = Object.keys(values);
+  if (keys.length === 1 && keys[0] === "isActive") {
+    const { data, error } = await supabase.rpc("set_contbus_departure_active", {
+      p_departure_id: id,
+      p_is_active: values.isActive,
+    });
+    if (!error) {
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row) {
+        throw new Error("Departure update was not applied — check admin permissions.");
+      }
+      return row;
+    }
+    if (error.code !== "42883" && error.code !== "PGRST202") {
+      console.error("set_contbus_departure_active failed", { id, values, error });
+      throw error;
+    }
+  }
+
+  const { data, error } = await supabase.from("contbus_departures").update(payload).eq("id", id).select("*");
   if (error) {
     console.error("updateDeparture failed", { id, payload, error });
     throw error;
@@ -79,6 +98,7 @@ export async function updateDeparture(id, values) {
     console.error("updateDeparture affected 0 rows (RLS rejected or row missing)", { id, payload });
     throw new Error("Departure update was not applied — check admin permissions.");
   }
+  return data[0];
 }
 
 export async function deleteDeparture(id) {
