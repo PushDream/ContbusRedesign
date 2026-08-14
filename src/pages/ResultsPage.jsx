@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Clock, MapPin, Users } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, ArrowRight, CalendarDays, Clock, MapPin, Search, Users } from "lucide-react";
 import { useApp } from "../context/AppContext.jsx";
 import { fares } from "../data/content.js";
 import { fetchDepartures } from "../lib/database.js";
@@ -25,6 +25,12 @@ export default function ResultsPage() {
   const [departures, setDepartures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [editingSearch, setEditingSearch] = useState(false);
+  const [draftFrom, setDraftFrom] = useState(from);
+  const [draftTo, setDraftTo] = useState(to);
+  const [draftDate, setDraftDate] = useState(date);
+  const [draftPassengers, setDraftPassengers] = useState(passengers);
+  const locations = ["Lublin", "Lotnisko Chopina", "Warszawa Marriott", "Lotnisko Modlin"];
 
   const matchedFare =
     fares.find(
@@ -72,6 +78,19 @@ export default function ResultsPage() {
     navigate(`/booking?${params.toString()}`);
   };
 
+  const handleSearchUpdate = (event) => {
+    event.preventDefault();
+    const params = new URLSearchParams({
+      from: draftFrom,
+      to: draftTo,
+      date: draftDate,
+      passengers: String(draftPassengers),
+    });
+    setEditingSearch(false);
+    setLoading(true);
+    navigate(`/results?${params.toString()}`);
+  };
+
   const [dateFormatted] = (() => {
     try {
       const d = new Date(date + "T00:00:00");
@@ -107,7 +126,56 @@ export default function ResultsPage() {
             </span>
           </div>
         </div>
+        <button
+          aria-expanded={editingSearch}
+          className="secondary-button results-edit-button"
+          onClick={() => setEditingSearch((value) => !value)}
+          type="button"
+        >
+          <Search size={16} />
+          Zmień wyszukiwanie
+        </button>
       </div>
+
+      {editingSearch && (
+        <form className="results-search-panel" onSubmit={handleSearchUpdate}>
+          <label>
+            <span>Skąd</span>
+            <select value={draftFrom} onChange={(event) => setDraftFrom(event.target.value)}>
+              {locations.map((place) => <option key={place}>{place}</option>)}
+            </select>
+          </label>
+          <button
+            aria-label="Zamień miejsca"
+            className="icon-button results-swap-button"
+            onClick={() => { setDraftFrom(draftTo); setDraftTo(draftFrom); }}
+            type="button"
+          >
+            <ArrowLeftRight size={17} />
+          </button>
+          <label>
+            <span>Dokąd</span>
+            <select value={draftTo} onChange={(event) => setDraftTo(event.target.value)}>
+              {locations.map((place) => <option key={place}>{place}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>Data podróży</span>
+            <div className="results-date-input">
+              <CalendarDays size={16} />
+              <input min={getTodayDate()} type="date" value={draftDate} onChange={(event) => setDraftDate(event.target.value)} />
+            </div>
+          </label>
+          <label>
+            <span>Pasażerowie</span>
+            <input min="1" max="8" type="number" value={draftPassengers} onChange={(event) => setDraftPassengers(Math.min(8, Math.max(1, Number(event.target.value) || 1)))} />
+          </label>
+          <button className="primary-button results-search-submit" type="submit">
+            <Search size={16} />
+            Pokaż kursy
+          </button>
+        </form>
+      )}
 
       <div className="results-list">
         {!loading && errorMessage && (
@@ -123,9 +191,14 @@ export default function ResultsPage() {
         )}
 
         {loading && (
-          <div className="secure-box results-loading">
-            <span className="spinner" aria-hidden="true" />
-            <span>Ładowanie kursów z bazy...</span>
+          <div aria-label="Ładowanie kursów" className="results-skeleton-list" role="status">
+            {[1, 2, 3, 4].map((item) => (
+              <div className="result-card skeleton-card" key={item}>
+                <span className="skeleton-block wide" />
+                <span className="skeleton-block medium" />
+                <span className="skeleton-block action" />
+              </div>
+            ))}
           </div>
         )}
 

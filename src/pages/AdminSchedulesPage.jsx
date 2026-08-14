@@ -124,6 +124,9 @@ export default function AdminSchedulesPage() {
   const [generateStart, setGenerateStart] = useState(() => todayDateOnly());
   const [generateEnd, setGenerateEnd] = useState(() => addDays(todayDateOnly(), 60));
   const [generating, setGenerating] = useState(false);
+  const [departureQuery, setDepartureQuery] = useState("");
+  const [departureStatus, setDepartureStatus] = useState("all");
+  const [departurePages, setDeparturePages] = useState({ lublin_warszawa: 1, warszawa_lublin: 1 });
 
   const [tripFilterStart, setTripFilterStart] = useState(() => todayDateOnly());
   const [tripFilterEnd, setTripFilterEnd] = useState(() => addDays(todayDateOnly(), 30));
@@ -131,6 +134,9 @@ export default function AdminSchedulesPage() {
   const [tripsLoading, setTripsLoading] = useState(true);
   const [tripsError, setTripsError] = useState("");
   const [savingTripId, setSavingTripId] = useState("");
+  const [tripQuery, setTripQuery] = useState("");
+  const [tripPage, setTripPage] = useState(1);
+  const pageSize = 12;
 
   const reload = useCallback(async () => {
     const data = await fetchScheduleData();
@@ -239,6 +245,18 @@ export default function AdminSchedulesPage() {
     return grouped;
   }, [departures]);
 
+  const visibleDeparturesByDirection = useMemo(() => {
+    const query = departureQuery.trim().toLowerCase();
+    return Object.fromEntries(Object.entries(departuresByDirection).map(([direction, items]) => [
+      direction,
+      items.filter((departure) => {
+        const matchesStatus = departureStatus === "all" || (departureStatus === "active" ? departure.is_active : !departure.is_active);
+        const haystack = `${timeText(departure.departure_time)} ${formatDays(departure.days_of_week, text)} ${departure.trip_type} ${departure.notes || ""}`.toLowerCase();
+        return matchesStatus && (!query || haystack.includes(query));
+      }),
+    ]));
+  }, [departureQuery, departureStatus, departuresByDirection, text]);
+
   const fareByPair = useMemo(() => {
     const map = {};
     fares.forEach((fare) => {
@@ -266,6 +284,13 @@ export default function AdminSchedulesPage() {
   const trips = tripAssignments.trips;
   const tripDrivers = tripAssignments.drivers;
   const tripVehicles = tripAssignments.vehicles;
+  const filteredTrips = useMemo(() => {
+    const query = tripQuery.trim().toLowerCase();
+    if (!query) return trips;
+    return trips.filter((trip) => [trip.departure_date, timeText(trip.departure_time), trip.route?.code, trip.driver?.full_name, trip.vehicle?.label, trip.vehicle?.plate_number, text.statusLabels[trip.status]].filter(Boolean).some((value) => String(value).toLowerCase().includes(query)));
+  }, [tripQuery, trips, text.statusLabels]);
+  const pagedTrips = filteredTrips.slice((tripPage - 1) * pageSize, tripPage * pageSize);
+  const tripPageCount = Math.max(1, Math.ceil(filteredTrips.length / pageSize));
 
   const patchDepartureInSchedule = useCallback((departureId, values) => {
     setSchedule((current) => {
@@ -484,10 +509,10 @@ export default function AdminSchedulesPage() {
         </div>
 
         {loading && (
-          <p className="admin-empty loading-row">
-            <span className="spinner" aria-hidden="true" />
-            {text.loadingTrips}
-          </p>
+          <div aria-label={text.loadingTrips} className="admin-panel admin-skeleton-panel" role="status">
+            <span className="skeleton-block medium" />
+            {[1, 2, 3, 4, 5].map((item) => <span className="skeleton-block row" key={item} />)}
+          </div>
         )}
 
         {!loading && activeTab === "departures" && (
@@ -539,7 +564,27 @@ export default function AdminSchedulesPage() {
               </div>
             </div>
 
-            {DIRECTIONS.map((direction) => (
+            <div className="admin-list-toolbar">
+              <label className="admin-search-field">
+                <span className="sr-only">Filtruj odjazdy</span>
+                <input onChange={(event) => { setDepartureQuery(event.target.value); setDeparturePages({ lublin_warszawa: 1, warszawa_lublin: 1 }); }} placeholder="Szukaj godziny, dnia lub typu..." type="search" value={departureQuery} />
+              </label>
+              <label>
+                <span className="sr-only">Status odjazdu</span>
+                <select onChange={(event) => { setDepartureStatus(event.target.value); setDeparturePages({ lublin_warszawa: 1, warszawa_lublin: 1 }); }} value={departureStatus}>
+                  <option value="all">Wszystkie statusy</option>
+                  <option value="active">Tylko aktywne</option>
+                  <option value="inactive">Tylko nieaktywne</option>
+                </select>
+              </label>
+              <span className="admin-results-count">{Object.values(visibleDeparturesByDirection).flat().length} odjazdów</span>
+            </div>
+
+            {DIRECTIONS.map((direction) => {
+              const directionDepartures = visibleDeparturesByDirection[direction.value];
+              const page = Math.min(departurePages[direction.value], Math.max(1, Math.ceil(directionDepartures.length / pageSize)));
+              const pageItems = directionDepartures.slice((page - 1) * pageSize, page * pageSize);
+              return (
               <div className="admin-departures-group" key={direction.value}>
                 <div className="admin-departures-group-header">
                   <h3>{text[direction.labelKey]}</h3>
@@ -563,10 +608,10 @@ export default function AdminSchedulesPage() {
                     <span>{text.isActive}</span>
                     <span />
                   </div>
-                  {departuresByDirection[direction.value].length === 0 && (
+                  {directionDepartures.length === 0 && (
                     <p className="admin-empty">{text.noDepartures}</p>
                   )}
-                  {departuresByDirection[direction.value].map((departure) => (
+                  {pageItems.map((departure) => (
                     <div className="admin-departures-row" key={departure.id}>
                       <strong>{timeText(departure.departure_time)}</strong>
                       <span>{formatDays(departure.days_of_week, text)}</span>
@@ -594,8 +639,15 @@ export default function AdminSchedulesPage() {
                     </div>
                   ))}
                 </div>
+                {directionDepartures.length > pageSize && (
+                  <div className="admin-pagination">
+                    <button disabled={page === 1} onClick={() => setDeparturePages((current) => ({ ...current, [direction.value]: page - 1 }))} type="button">Poprzednia</button>
+                    <span>Strona {page} z {Math.ceil(directionDepartures.length / pageSize)}</span>
+                    <button disabled={page === Math.ceil(directionDepartures.length / pageSize)} onClick={() => setDeparturePages((current) => ({ ...current, [direction.value]: page + 1 }))} type="button">Następna</button>
+                  </div>
+                )}
               </div>
-            ))}
+            );})}
           </section>
         )}
 
@@ -736,7 +788,7 @@ export default function AdminSchedulesPage() {
                 <span>{text.dateFrom}</span>
                 <input
                   disabled={tripsLoading}
-                  onChange={(event) => setTripFilterStart(event.target.value)}
+                  onChange={(event) => { setTripFilterStart(event.target.value); setTripPage(1); }}
                   type="date"
                   value={tripFilterStart}
                 />
@@ -745,7 +797,7 @@ export default function AdminSchedulesPage() {
                 <span>{text.dateTo}</span>
                 <input
                   disabled={tripsLoading}
-                  onChange={(event) => setTripFilterEnd(event.target.value)}
+                  onChange={(event) => { setTripFilterEnd(event.target.value); setTripPage(1); }}
                   type="date"
                   value={tripFilterEnd}
                 />
@@ -761,6 +813,14 @@ export default function AdminSchedulesPage() {
               </button>
             </div>
 
+            <div className="admin-list-toolbar compact">
+              <label className="admin-search-field">
+                <span className="sr-only">Filtruj kursy</span>
+                <input onChange={(event) => { setTripQuery(event.target.value); setTripPage(1); }} placeholder="Szukaj trasy, kierowcy, pojazdu..." type="search" value={tripQuery} />
+              </label>
+              <span className="admin-results-count">{filteredTrips.length} kursów</span>
+            </div>
+
             {tripsError && (
               <div className="admin-alert danger">
                 <AlertTriangle size={18} />
@@ -769,10 +829,9 @@ export default function AdminSchedulesPage() {
             )}
 
             {tripsLoading ? (
-              <p className="admin-empty loading-row">
-                <span className="spinner" aria-hidden="true" />
-                {text.loadingTrips}
-              </p>
+              <div aria-label={text.loadingTrips} className="admin-table-skeleton" role="status">
+                {[1, 2, 3, 4, 5].map((item) => <span className="skeleton-block row" key={item} />)}
+              </div>
             ) : (
               <div className="admin-trips-table">
                 <div className="admin-trips-row header">
@@ -783,8 +842,8 @@ export default function AdminSchedulesPage() {
                   <span>{text.vehicle}</span>
                   <span>{text.status}</span>
                 </div>
-                {trips.length === 0 && <p className="admin-empty">{text.noTrips}</p>}
-                {trips.map((trip) => (
+                {filteredTrips.length === 0 && <p className="admin-empty">{text.noTrips}</p>}
+                {pagedTrips.map((trip) => (
                   <div className="admin-trips-row" key={trip.id}>
                     <span>{new Date(`${trip.departure_date}T00:00:00`).toLocaleDateString(text.locale)}</span>
                     <strong>{timeText(trip.departure_time)}</strong>
@@ -818,6 +877,13 @@ export default function AdminSchedulesPage() {
                     </span>
                   </div>
                 ))}
+                {filteredTrips.length > pageSize && (
+                  <div className="admin-pagination admin-trips-pagination">
+                    <button disabled={tripPage === 1} onClick={() => setTripPage((page) => page - 1)} type="button">Poprzednia</button>
+                    <span>Strona {tripPage} z {tripPageCount}</span>
+                    <button disabled={tripPage === tripPageCount} onClick={() => setTripPage((page) => page + 1)} type="button">Następna</button>
+                  </div>
+                )}
               </div>
             )}
           </section>

@@ -353,10 +353,14 @@ export default function AccountPage() {
 
           {bookingsError && <div className="account-error inline">{bookingsError}</div>}
           {loadingBookings && (
-            <p className="account-empty loading-row">
-              <span className="spinner" aria-hidden="true" />
-              Ładowanie rezerwacji...
-            </p>
+            <div aria-label="Ładowanie rezerwacji" className="account-booking-list skeleton-list" role="status">
+              {[1, 2].map((item) => (
+                <div className="account-booking-row skeleton-card" key={item}>
+                  <span className="skeleton-block wide" />
+                  <span className="skeleton-block medium" />
+                </div>
+              ))}
+            </div>
           )}
           {!loadingBookings && !bookings.length && !bookingsError && (
             <div className="account-empty">

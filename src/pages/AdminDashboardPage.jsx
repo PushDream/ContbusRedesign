@@ -186,6 +186,9 @@ export default function AdminDashboardPage() {
   const [bookingQuery, setBookingQuery] = useState("");
   const [manifestFilter, setManifestFilter] = useState("all");
   const [savingKey, setSavingKey] = useState("");
+  const [tripListQuery, setTripListQuery] = useState("");
+  const [tripListStatus, setTripListStatus] = useState("all");
+  const [tripListPage, setTripListPage] = useState(1);
 
   const loadDashboard = useCallback(async () => {
     if (!staff) return;
@@ -262,6 +265,18 @@ export default function AdminDashboardPage() {
   const drivers = useMemo(() => operations?.drivers || [], [operations]);
   const profiles = useMemo(() => operations?.profiles || [], [operations]);
   const selectedTrip = operationalTrips.find((trip) => trip.id === selectedTripId) || operationalTrips[0] || null;
+  const filteredOperationalTrips = useMemo(() => {
+    const query = tripListQuery.trim().toLowerCase();
+    return operationalTrips.filter((trip) => {
+      const matchesStatus = tripListStatus === "all" || trip.status === tripListStatus;
+      const matchesQuery = !query || [trip.departure_time, trip.arrival_time, trip.origin_name, trip.destination_name, trip.route_code, trip.platform, trip.vehicle?.label, trip.driver?.full_name].filter(Boolean).some((value) => String(value).toLowerCase().includes(query));
+      return matchesStatus && matchesQuery;
+    });
+  }, [operationalTrips, tripListQuery, tripListStatus]);
+  const tripListPageSize = 10;
+  const tripListPageCount = Math.max(1, Math.ceil(filteredOperationalTrips.length / tripListPageSize));
+  const visibleOperationalTrips = filteredOperationalTrips.slice((tripListPage - 1) * tripListPageSize, tripListPage * tripListPageSize);
+
   const selectedTripBookings = useMemo(
     () => operationalBookings.filter((booking) => booking.trip_id === selectedTrip?.id),
     [operationalBookings, selectedTrip?.id],
@@ -565,6 +580,7 @@ export default function AdminDashboardPage() {
                 setLoading(true);
                 setErrorMessage("");
                 setDate(event.target.value);
+                setTripListPage(1);
               }}
             />
           </label>
@@ -1007,15 +1023,27 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="admin-trip-list">
+            <div className="admin-list-toolbar admin-dashboard-trip-toolbar">
+              <label className="admin-search-field">
+                <span className="sr-only">Filtruj kursy operacyjne</span>
+                <input onChange={(event) => { setTripListQuery(event.target.value); setTripListPage(1); }} placeholder="Szukaj godziny, trasy lub przypisania..." type="search" value={tripListQuery} />
+              </label>
+              <label>
+                <span className="sr-only">Status kursu</span>
+                <select onChange={(event) => { setTripListStatus(event.target.value); setTripListPage(1); }} value={tripListStatus}>
+                  <option value="all">Wszystkie statusy</option>
+                  {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
+            </div>
             {loading && (
-              <p className="admin-empty loading-row">
-                <span className="spinner" aria-hidden="true" />
-                {text.loadingTrips}
-              </p>
+              <div aria-label={text.loadingTrips} className="admin-table-skeleton" role="status">
+                {[1, 2, 3, 4].map((item) => <span className="skeleton-block row" key={item} />)}
+              </div>
             )}
-            {!loading && trips.length === 0 && <p className="admin-empty">{text.noTripsForDate}</p>}
+            {!loading && filteredOperationalTrips.length === 0 && <p className="admin-empty">{text.noTripsForDate}</p>}
 
-            {operationalTrips.map((trip) => {
+            {visibleOperationalTrips.map((trip) => {
               const load = occupancy(trip.passenger_count, trip.capacity);
               return (
                 <article
@@ -1056,6 +1084,13 @@ export default function AdminDashboardPage() {
                 </article>
               );
             })}
+            {filteredOperationalTrips.length > tripListPageSize && (
+              <div className="admin-pagination">
+                <button disabled={tripListPage === 1} onClick={() => setTripListPage((page) => page - 1)} type="button">Poprzednia</button>
+                <span>Strona {tripListPage} z {tripListPageCount}</span>
+                <button disabled={tripListPage === tripListPageCount} onClick={() => setTripListPage((page) => page + 1)} type="button">Następna</button>
+              </div>
+            )}
           </div>
         </div>
 
