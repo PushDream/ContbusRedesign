@@ -125,12 +125,7 @@ export async function fetchDepartures({ from, to, date }) {
   ] = await Promise.all([
     supabase.from("stations").select("*").in("code", [originCode, destinationCode]),
     supabase.from("routes").select("*").eq("active", true),
-    supabase
-      .from("trips")
-      .select("*")
-      .eq("departure_date", departureDate)
-      .neq("status", "cancelled")
-      .order("departure_time", { ascending: true }),
+    supabase.rpc("public_trip_schedule", { p_date: departureDate }),
     timetableDirection
       ? supabase
           .from("contbus_departures")
