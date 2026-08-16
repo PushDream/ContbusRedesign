@@ -125,12 +125,7 @@ export async function fetchDepartures({ from, to, date }) {
   ] = await Promise.all([
     supabase.from("stations").select("*").in("code", [originCode, destinationCode]),
     supabase.from("routes").select("*").eq("active", true),
-    supabase
-      .from("trips")
-      .select("*")
-      .eq("departure_date", departureDate)
-      .neq("status", "cancelled")
-      .order("departure_time", { ascending: true }),
+    supabase.rpc("public_trip_schedule", { p_date: departureDate }),
     timetableDirection
       ? supabase
           .from("contbus_departures")
@@ -632,10 +627,13 @@ export async function updateAdminTrip(tripId, values) {
   if ("status" in values) payload.status = values.status;
   if ("vehicle_id" in values) payload.vehicle_id = values.vehicle_id || null;
 
-  const { data, error } = await supabase.from("trips").update(payload).eq("id", tripId).select("id");
+  const { data, error } = await supabase.rpc("update_staff_trip", {
+    p_trip_id: tripId,
+    p_patch: payload,
+  });
   if (error) throw error;
-  if (!data || data.length === 0) {
-    throw new Error("Trip update was not applied — check admin permissions.");
+  if (!data) {
+    throw new Error("Trip update was not applied — check staff permissions.");
   }
 }
 
@@ -644,10 +642,13 @@ export async function updateAdminBookingStatus(bookingId, status) {
     throw new Error("Supabase is not configured for this deployment.");
   }
 
-  const { data, error } = await supabase.from("bookings").update({ status }).eq("id", bookingId).select("id");
+  const { data, error } = await supabase.rpc("update_staff_booking_status", {
+    p_booking_id: bookingId,
+    p_status: status,
+  });
   if (error) throw error;
-  if (!data || data.length === 0) {
-    throw new Error("Booking status update was not applied — check admin permissions.");
+  if (!data) {
+    throw new Error("Booking status update was not applied — check staff permissions.");
   }
 }
 
