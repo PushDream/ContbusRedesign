@@ -7,3 +7,4 @@ dist
 !.env.example
 tmp/pdfs/
 .claude/
+splash-assets/rendered/
