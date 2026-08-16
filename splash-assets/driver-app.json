@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "Contbus Driver",
+    "slug": "contbus-driver-app",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "contbusdriver",
+    "icon": "./assets/app-icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#10251d"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "pl.contbus.driver",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Contbus Driver uses the camera to scan customer ticket QR codes.",
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIUserInterfaceStyle": "Light",
+        "UIViewControllerBasedStatusBarAppearance": true
+      }
+    },
+    "android": {
+      "package": "pl.contbus.driver",
+      "splash": {
+        "image": "./assets/app-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#10251d"
+      },
+      "permissions": [
+        "CAMERA"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#10251d",
+        "foregroundImage": "./assets/app-icon.png"
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9b2b5311-b5ce-4869-83b5-481d67ae7349"
+      }
+    },
+    "owner": "paynegh",
+    "plugins": [
+      "expo-font"
+    ]
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "Contbus",
+    "slug": "contbus-customer-app",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "contbus",
+    "icon": "./assets/app-icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#f7faf8"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "pl.contbus.customer",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIUserInterfaceStyle": "Light",
+        "UIViewControllerBasedStatusBarAppearance": true
+      }
+    },
+    "android": {
+      "package": "pl.contbus.customer",
+      "splash": {
+        "image": "./assets/app-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#f7faf8"
+      },
+      "adaptiveIcon": {
+        "backgroundColor": "#008a3d",
+        "foregroundImage": "./assets/app-icon.png"
+      }
+    },
+    "androidStatusBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#008a3d"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b8688a51-0dab-449d-a60d-4b595c77d40d"
+      }
+    },
+    "owner": "paynegh",
+    "plugins": [
+      "expo-font",
+      "@react-native-community/datetimepicker"
+    ]
+  }
+}
