@@ -203,9 +203,12 @@ export async function updateTripAssignment(tripId, values) {
   if ("driverId" in values) payload.driver_id = values.driverId || null;
   if ("vehicleId" in values) payload.vehicle_id = values.vehicleId || null;
 
-  const { data, error } = await supabase.from("trips").update(payload).eq("id", tripId).select("id");
+  const { data, error } = await supabase.rpc("update_staff_trip", {
+    p_trip_id: tripId,
+    p_patch: payload,
+  });
   if (error) throw error;
-  if (!data || data.length === 0) {
-    throw new Error("Trip assignment was not applied — check admin permissions.");
+  if (!data) {
+    throw new Error("Trip assignment was not applied — check staff permissions.");
   }
 }
