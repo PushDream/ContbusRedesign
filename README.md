@@ -25,7 +25,10 @@ src/
   data/content.js        route, stop, FAQ and translation data
   lib/                    ToastProvider, dark-mode hook
   components/             one component per section/feature
-  pages/DriverAppPage.jsx driver-facing operations app prototype
+  pages/DriverAppPage.jsx Supabase-backed driver operations app
+supabase/
+  migrations/             reproducible PostgreSQL schema and security history
+  tests/database/         pgTAP security, RLS, capacity, and index tests
   App.jsx                 page composition
 public/
   icon.svg, logos and fonts   static assets

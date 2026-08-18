@@ -53,6 +53,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -80,6 +81,7 @@ export function AuthProvider({ children }) {
         if (!active) return;
         if (data.session) {
           window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+          setLoadingProfile(true);
           setSession(data.session);
           setLoadingAuth(false);
           return;
@@ -89,6 +91,7 @@ export function AuthProvider({ children }) {
           if (fallbackSession) {
             window.localStorage.setItem(getSupabaseStorageKey(), JSON.stringify(fallbackSession));
             window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+            setLoadingProfile(true);
             setSession(fallbackSession);
             setLoadingAuth(false);
             return;
@@ -99,6 +102,7 @@ export function AuthProvider({ children }) {
 
       const { data } = await supabase.auth.getSession();
       if (!active) return;
+      setLoadingProfile(Boolean(data.session));
       setSession(data.session);
       setLoadingAuth(false);
     }
@@ -109,6 +113,7 @@ export function AuthProvider({ children }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!nextSession && _event !== "SIGNED_OUT" && _event !== "USER_DELETED") return;
+      setLoadingProfile(Boolean(nextSession));
       setSession(nextSession);
       setProfile(null);
     });
@@ -124,7 +129,10 @@ export function AuthProvider({ children }) {
 
     if (!session || !isSupabaseConfigured) {
       queueMicrotask(() => {
-        if (active) setProfile(null);
+        if (active) {
+          setProfile(null);
+          setLoadingProfile(false);
+        }
       });
       return () => {
         active = false;
@@ -140,6 +148,7 @@ export function AuthProvider({ children }) {
         if (!active) return;
         if (error) console.error("AuthContext: profile fetch failed", error);
         setProfile(data || null);
+        setLoadingProfile(false);
       });
 
     return () => {
@@ -151,6 +160,7 @@ export function AuthProvider({ children }) {
     () => ({
       configured: isSupabaseConfigured,
       loadingAuth,
+      loadingProfile,
       profile,
       session,
       signIn: (credentials) => supabase.auth.signInWithPassword(credentials),
@@ -178,11 +188,10 @@ export function AuthProvider({ children }) {
         });
 
         if (!result.error && result.data?.session && result.data?.user) {
-          const { error: profileError } = await supabase.from("profiles").upsert({
-            id: result.data.user.id,
-            full_name: fullName,
-            phone,
-          });
+          const { error: profileError } = await supabase
+            .from("profiles")
+            .update({ full_name: fullName, phone })
+            .eq("id", result.data.user.id);
           if (profileError) {
             console.error("signUp: profile upsert failed", profileError);
             return { ...result, error: profileError };
@@ -192,7 +201,7 @@ export function AuthProvider({ children }) {
         return result;
       },
     }),
-    [loadingAuth, profile, session],
+    [loadingAuth, loadingProfile, profile, session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

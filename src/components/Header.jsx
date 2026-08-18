@@ -1,6 +1,7 @@
 import { Languages, Menu, Moon, Sun, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { logoUrl } from "../data/content.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const LANGUAGE_OPTIONS = [
   { key: "pl", flag: "🇵🇱", label: "Polski" },
@@ -17,11 +18,15 @@ export default function Header({
   setDark,
   t,
 }) {
+  const { profile } = useAuth();
   const navLinks = [
     { to: "/", label: t.navHome, end: true },
     { to: "/results", label: t.nav[1] },
     { to: "/moje-bilety", label: t.quickNavMyTickets },
     { to: "/konto", label: t.customerAccountNav },
+    ...(["driver", "dispatcher", "admin"].includes(profile?.role)
+      ? [{ to: "/driver", label: language === "pl" ? "Kierowca" : language === "ua" ? "Водій" : "Driver" }]
+      : []),
     { to: "/kontakt", label: t.nav[5] },
   ];
 

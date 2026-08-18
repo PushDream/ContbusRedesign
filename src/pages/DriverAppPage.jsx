@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Navigate } from "react-router-dom";
 import {
   AlertTriangle,
   Bus,
@@ -9,128 +10,161 @@ import {
   MessageSquare,
   QrCode,
   Radio,
+  RefreshCw,
   ScanLine,
   ShieldCheck,
   UserCheck,
   UserX,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext.jsx";
+import {
+  fetchDriverTrips,
+  reportDriverTripIncident,
+  setDriverPassengerCheckIn,
+  updateDriverTripStatus,
+} from "../lib/driver.js";
 import { useToast } from "../lib/ToastProvider.jsx";
 
-const driverTrips = [
-  {
-    id: "CB-0640-WAW",
-    route: "Lublin - Warszawa Marriott",
-    vehicle: "Mercedes Sprinter 22",
-    plate: "LU 8429C",
-    driver: "Marek Nowak",
-    departure: "06:40",
-    arrival: "09:15",
-    platform: "Peron 3",
-    stops: [
-      { title: "Lublin, Dworcowa 2", time: "06:40", board: 14, drop: 0 },
-      { title: "Lublin, Al. Tysiaclecia", time: "06:48", board: 4, drop: 0 },
-      { title: "Warszawa Marriott", time: "09:15", board: 0, drop: 18 },
-    ],
-    passengers: [
-      { id: "p1", code: "CB-3ZZTLH", name: "Jan Kowalski", seat: "2A", stop: "Dworcowa 2", luggage: "1 bagaz" },
-      { id: "p2", code: "CB-7LQ8PP", name: "Anna Zielinska", seat: "2B", stop: "Dworcowa 2", luggage: "2 bagaze" },
-      { id: "p3", code: "CB-2HKS90", name: "Piotr Malec", seat: "4C", stop: "Al. Tysiaclecia", luggage: "bez bagazu" },
-      { id: "p4", code: "CB-91AD2K", name: "Oksana Shevchenko", seat: "7D", stop: "Dworcowa 2", luggage: "1 bagaz" },
-      { id: "p5", code: "CB-1MM8TR", name: "Karolina Wrona", seat: "9A", stop: "Al. Tysiaclecia", luggage: "1 bagaz" },
-    ],
-  },
-  {
-    id: "CB-0815-CHP",
-    route: "Lublin - Lotnisko Chopina",
-    vehicle: "Iveco Daily 19",
-    plate: "LU 3108K",
-    driver: "Marek Nowak",
-    departure: "08:15",
-    arrival: "11:10",
-    platform: "Peron 5",
-    stops: [
-      { title: "Lublin, Dworcowa 2", time: "08:15", board: 9, drop: 0 },
-      { title: "Lublin, Al. Tysiaclecia", time: "08:23", board: 3, drop: 0 },
-      { title: "Lotnisko Chopina, stanowisko 6", time: "11:10", board: 0, drop: 12 },
-    ],
-    passengers: [
-      { id: "p6", code: "CB-AIR712", name: "Tomasz Sarafin", seat: "1A", stop: "Dworcowa 2", luggage: "2 bagaze" },
-      { id: "p7", code: "CB-AIR144", name: "Marta Rybak", seat: "1B", stop: "Dworcowa 2", luggage: "1 bagaz" },
-      { id: "p8", code: "CB-AIR520", name: "Oleksii Bondar", seat: "3C", stop: "Al. Tysiaclecia", luggage: "2 bagaze" },
-      { id: "p9", code: "CB-AIR831", name: "Ewa Mazur", seat: "5D", stop: "Dworcowa 2", luggage: "1 bagaz" },
-    ],
-  },
-  {
-    id: "CB-1130-MOD",
-    route: "Lublin - Lotnisko Modlin",
-    vehicle: "Mercedes Sprinter 22",
-    plate: "LU 7742S",
-    driver: "Marek Nowak",
-    departure: "11:30",
-    arrival: "15:05",
-    platform: null,
-    stops: [
-      { title: "Lublin, Dworcowa 2", time: "11:30", board: 11, drop: 0 },
-      { title: "Warszawa Marriott", time: "14:05", board: 2, drop: 5 },
-      { title: "Lotnisko Modlin", time: "15:05", board: 0, drop: 8 },
-    ],
-    passengers: [
-      { id: "p10", code: "CB-MOD102", name: "Michal Sowa", seat: "2C", stop: "Dworcowa 2", luggage: "1 bagaz" },
-      { id: "p11", code: "CB-MOD615", name: "Julia Kaminska", seat: "3A", stop: "Dworcowa 2", luggage: "2 bagaze" },
-      { id: "p12", code: "CB-MOD771", name: "Robert Wilk", seat: "6D", stop: "Warszawa Marriott", luggage: "bez bagazu" },
-    ],
-  },
-];
-
 const statusLabels = {
-  preparing: "Przygotowanie",
+  scheduled: "Przygotowanie",
   boarding: "Odprawa",
   departed: "W trasie",
   delayed: "Opozniony",
   arrived: "Zakonczony",
 };
 
+function getTodayDate() {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function isAllowedDriverTransition(currentStatus, nextStatus) {
+  if (currentStatus === nextStatus) return true;
+  const allowed = {
+    scheduled: ["boarding", "delayed"],
+    boarding: ["departed", "delayed"],
+    delayed: ["boarding", "departed", "arrived"],
+    departed: ["delayed", "arrived"],
+    arrived: [],
+  };
+  return (allowed[currentStatus] || []).includes(nextStatus);
+}
+
+function DriverMessage({ children, title }) {
+  return (
+    <section className="driver-hero">
+      <div>
+        <p className="eyebrow">Contbus Operations</p>
+        <h1>{title}</h1>
+        <p>{children}</p>
+      </div>
+    </section>
+  );
+}
+
 export default function DriverAppPage() {
   const notify = useToast();
-  const [selectedTripId, setSelectedTripId] = useState(driverTrips[0].id);
-  const [checkedByTrip, setCheckedByTrip] = useState({});
-  const [statusByTrip, setStatusByTrip] = useState({
-    [driverTrips[0].id]: "boarding",
-    [driverTrips[1].id]: "preparing",
-    [driverTrips[2].id]: "preparing",
-  });
+  const { configured, loadingAuth, loadingProfile, profile, session } = useAuth();
+  const [driverTrips, setDriverTrips] = useState([]);
+  const [selectedTripId, setSelectedTripId] = useState("");
   const [stopByTrip, setStopByTrip] = useState({});
-  const [scanCode, setScanCode] = useState("CB-3ZZTLH");
+  const [scanCode, setScanCode] = useState("");
   const [incident, setIncident] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [savingKey, setSavingKey] = useState("");
+  const operationalRole = ["driver", "dispatcher", "admin"].includes(profile?.role);
 
-  const selectedTrip = driverTrips.find((trip) => trip.id === selectedTripId) || driverTrips[0];
-  const checkedIds = useMemo(
-    () => checkedByTrip[selectedTrip.id] || [],
-    [checkedByTrip, selectedTrip.id],
+  const loadTrips = useCallback(async () => {
+    setLoading(true);
+    setErrorMessage("");
+    try {
+      const trips = await fetchDriverTrips(getTodayDate());
+      setDriverTrips(trips);
+      setSelectedTripId((current) => {
+        if (current && trips.some((trip) => trip.id === current)) return current;
+        return trips[0]?.id || "";
+      });
+    } catch (error) {
+      setDriverTrips([]);
+      setErrorMessage(error.message || "Nie udalo sie pobrac przypisanych kursow.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!session || !operationalRole) return;
+    queueMicrotask(loadTrips);
+  }, [loadTrips, operationalRole, session]);
+
+  const selectedTrip = driverTrips.find((trip) => trip.id === selectedTripId) || driverTrips[0] || null;
+  const checkedSet = useMemo(
+    () =>
+      new Set(
+        (selectedTrip?.passengers || [])
+          .filter((passenger) => passenger.checked)
+          .map((passenger) => passenger.id),
+      ),
+    [selectedTrip],
   );
-  const checkedSet = useMemo(() => new Set(checkedIds), [checkedIds]);
-  const activeStop = stopByTrip[selectedTrip.id] || 0;
-  const status = statusByTrip[selectedTrip.id] || "preparing";
-  const checkedCount = checkedIds.length;
-  const passengerCount = selectedTrip.passengers.length;
-  const completion = Math.round((checkedCount / passengerCount) * 100);
+  const activeStop = selectedTrip
+    ? Math.min(stopByTrip[selectedTrip.id] || 0, Math.max(0, selectedTrip.stops.length - 1))
+    : 0;
+  const status = selectedTrip?.status || "scheduled";
+  const checkedCount = checkedSet.size;
+  const passengerCount = selectedTrip?.passengers.length || 0;
+  const completion = passengerCount ? Math.round((checkedCount / passengerCount) * 100) : 0;
+  const statusActionDisabled = (nextStatus) =>
+    Boolean(savingKey) || (profile?.role === "driver" && !isAllowedDriverTransition(status, nextStatus));
 
-  const setTripStatus = (nextStatus) => {
-    setStatusByTrip((current) => ({ ...current, [selectedTrip.id]: nextStatus }));
+  const setTripStatus = async (nextStatus) => {
+    if (!selectedTrip || savingKey) return;
+    setSavingKey(`status-${selectedTrip.id}`);
+    try {
+      await updateDriverTripStatus(selectedTrip.id, nextStatus);
+      setDriverTrips((current) =>
+        current.map((trip) => (trip.id === selectedTrip.id ? { ...trip, status: nextStatus } : trip)),
+      );
+      notify("Status kursu zaktualizowany.", "success");
+    } catch (error) {
+      notify(error.message || "Nie udalo sie zmienic statusu kursu.", "error");
+    } finally {
+      setSavingKey("");
+    }
   };
 
-  const togglePassenger = (passengerId) => {
-    setCheckedByTrip((current) => {
-      const currentIds = current[selectedTrip.id] || [];
-      const nextIds = currentIds.includes(passengerId)
-        ? currentIds.filter((id) => id !== passengerId)
-        : [...currentIds, passengerId];
-      return { ...current, [selectedTrip.id]: nextIds };
-    });
+  const setPassengerChecked = async (passenger, checked) => {
+    if (!selectedTrip || savingKey) return;
+    setSavingKey(`passenger-${passenger.id}`);
+    try {
+      await setDriverPassengerCheckIn(passenger.id, checked);
+      setDriverTrips((current) =>
+        current.map((trip) =>
+          trip.id === selectedTrip.id
+            ? {
+                ...trip,
+                passengers: trip.passengers.map((item) =>
+                  item.id === passenger.id ? { ...item, checked } : item,
+                ),
+              }
+            : trip,
+        ),
+      );
+      notify(checked ? `${passenger.name} odprawiony.` : `Cofnieto odprawe: ${passenger.name}.`, "success");
+    } catch (error) {
+      notify(error.message || "Nie udalo sie zapisac odprawy.", "error");
+    } finally {
+      setSavingKey("");
+    }
   };
 
   const handleScan = (event) => {
     event.preventDefault();
+    if (!selectedTrip) return;
     const normalized = scanCode.trim().toUpperCase();
     const match = selectedTrip.passengers.find((passenger) => passenger.code === normalized);
 
@@ -139,27 +173,62 @@ export default function DriverAppPage() {
       return;
     }
 
-    if (!checkedSet.has(match.id)) {
-      togglePassenger(match.id);
+    if (match.checked) {
+      notify(`${match.name} jest juz odprawiony.`, "info");
+      return;
     }
-    notify(`${match.name} odprawiony.`, "success");
+    setPassengerChecked(match, true);
   };
 
   const advanceStop = () => {
+    if (!selectedTrip) return;
     setStopByTrip((current) => ({
       ...current,
       [selectedTrip.id]: Math.min(activeStop + 1, selectedTrip.stops.length - 1),
     }));
   };
 
-  const saveIncident = () => {
-    if (!incident.trim()) {
+  const saveIncident = async () => {
+    if (!selectedTrip || savingKey) return;
+    const note = incident.trim();
+    if (!note) {
       notify("Dodaj krotka notatke przed zapisaniem.", "info");
       return;
     }
-    notify("Notatka operacyjna zapisana lokalnie.", "success");
-    setIncident("");
+    setSavingKey(`incident-${selectedTrip.id}`);
+    try {
+      await reportDriverTripIncident(selectedTrip.id, note);
+      notify("Notatka operacyjna zapisana.", "success");
+      setIncident("");
+    } catch (error) {
+      notify(error.message || "Nie udalo sie zapisac notatki.", "error");
+    } finally {
+      setSavingKey("");
+    }
   };
+
+  if (!configured) {
+    return (
+      <div className="driver-shell">
+        <DriverMessage title="Aplikacja kierowcy">Supabase nie jest skonfigurowany dla tego wdrozenia.</DriverMessage>
+      </div>
+    );
+  }
+  if (loadingAuth || (session && loadingProfile)) {
+    return (
+      <div className="driver-shell">
+        <DriverMessage title="Sprawdzanie dostepu">Trwa weryfikacja konta operacyjnego.</DriverMessage>
+      </div>
+    );
+  }
+  if (!session) return <Navigate to="/konto" replace state={{ from: "/driver" }} />;
+  if (!operationalRole) {
+    return (
+      <div className="driver-shell">
+        <DriverMessage title="Brak dostepu">To konto nie ma roli kierowcy ani pracownika operacyjnego.</DriverMessage>
+      </div>
+    );
+  }
 
   return (
     <div className="driver-shell">
@@ -167,231 +236,263 @@ export default function DriverAppPage() {
         <div>
           <p className="eyebrow">Contbus Operations</p>
           <h1>Aplikacja kierowcy</h1>
-          <p>
-            Jedno miejsce do odprawy pasazerow, kontroli trasy i raportowania statusu kursu.
-          </p>
+          <p>Jedno miejsce do odprawy pasazerow, kontroli trasy i raportowania statusu kursu.</p>
         </div>
 
         <div className="driver-status-panel" aria-label="Status pracy">
           <div>
             <span>Dzisiaj</span>
-            <strong>3 kursy</strong>
+            <strong>{driverTrips.length} kursy</strong>
           </div>
           <div>
             <span>Kierowca</span>
-            <strong>{selectedTrip.driver}</strong>
+            <strong>{profile?.full_name || session.user.email}</strong>
           </div>
           <div>
             <span>Synchronizacja</span>
-            <strong>Online</strong>
+            <strong>{errorMessage ? "Blad" : "Online"}</strong>
           </div>
         </div>
       </section>
 
-      <section className="driver-grid" aria-label="Panel kierowcy">
-        <aside className="driver-trips" aria-label="Dzisiejsze kursy">
-          <div className="driver-panel-heading">
-            <ClipboardList size={18} />
-            <h2>Dzisiejsze kursy</h2>
+      {loading && <DriverMessage title="Ladowanie kursow">Pobieramy dzisiejsze przypisane kursy.</DriverMessage>}
+
+      {!loading && errorMessage && (
+        <section className="driver-trip-header">
+          <div>
+            <p className="eyebrow">Blad synchronizacji</p>
+            <h2>{errorMessage}</h2>
           </div>
+          <button className="secondary-button" onClick={loadTrips} type="button">
+            <RefreshCw size={17} />
+            Sprobuj ponownie
+          </button>
+        </section>
+      )}
 
-          {driverTrips.map((trip) => {
-            const tripStatus = statusByTrip[trip.id] || "preparing";
-            const tripChecks = checkedByTrip[trip.id]?.length || 0;
-            return (
-              <button
-                className={trip.id === selectedTrip.id ? "driver-trip active" : "driver-trip"}
-                key={trip.id}
-                onClick={() => setSelectedTripId(trip.id)}
-                type="button"
-              >
-                <span className={`driver-status-dot ${tripStatus}`} />
-                <span>
-                  <strong>{trip.departure}</strong>
-                  {trip.route}
-                </span>
-                <small>
-                  {tripChecks}/{trip.passengers.length}
-                </small>
-              </button>
-            );
-          })}
-        </aside>
+      {!loading && !errorMessage && !selectedTrip && (
+        <DriverMessage title="Brak kursow">Na dzisiaj nie masz przypisanych aktywnych kursow.</DriverMessage>
+      )}
 
-        <div className="driver-main">
-          <section className="driver-trip-header">
-            <div>
-              <p className="eyebrow">{selectedTrip.id}</p>
-              <h2>{selectedTrip.route}</h2>
-              <div className="driver-meta-row">
-                <span>
-                  <Bus size={16} />
-                  {selectedTrip.vehicle}
-                </span>
-                <span>{selectedTrip.plate}</span>
-                {selectedTrip.platform && <span>{selectedTrip.platform}</span>}
-              </div>
-            </div>
-            <div className="driver-trip-clock">
-              <Clock size={18} />
-              <strong>{selectedTrip.departure}</strong>
-              <span>{selectedTrip.arrival}</span>
-            </div>
-          </section>
-
-          <section className="driver-metrics" aria-label="Podsumowanie kursu">
-            <article>
-              <UserCheck size={18} />
-              <span>Odprawieni</span>
-              <strong>
-                {checkedCount}/{passengerCount}
-              </strong>
-            </article>
-            <article>
-              <ShieldCheck size={18} />
-              <span>Status</span>
-              <strong>{statusLabels[status]}</strong>
-            </article>
-            <article>
-              <MapPin size={18} />
-              <span>Aktualny przystanek</span>
-              <strong>{selectedTrip.stops[activeStop].title}</strong>
-            </article>
-          </section>
-
-          <section className="driver-workspace">
-            <div className="driver-board">
-              <div className="driver-panel-heading">
-                <ScanLine size={18} />
-                <h2>Odprawa biletow</h2>
-              </div>
-
-              <form className="driver-scan" onSubmit={handleScan}>
-                <label>
-                  <span>Kod biletu</span>
-                  <input
-                    value={scanCode}
-                    onChange={(event) => setScanCode(event.target.value)}
-                    placeholder="CB-..."
-                  />
-                </label>
-                <button className="primary-button" type="submit">
-                  <QrCode size={18} />
-                  Sprawdz
-                </button>
-              </form>
-
-              <div className="driver-progress" aria-label={`Odprawa ${completion}%`}>
-                <span style={{ width: `${completion}%` }} />
-              </div>
-
-              <div className="driver-manifest">
-                {selectedTrip.passengers.map((passenger) => {
-                  const checked = checkedSet.has(passenger.id);
-                  return (
-                    <article className={checked ? "manifest-row checked" : "manifest-row"} key={passenger.id}>
-                      <button
-                        aria-label={checked ? `Cofnij odprawe ${passenger.name}` : `Odpraw ${passenger.name}`}
-                        className="manifest-check"
-                        onClick={() => togglePassenger(passenger.id)}
-                        type="button"
-                      >
-                        {checked ? <CheckCircle2 size={20} /> : <UserX size={20} />}
-                      </button>
-                      <div>
-                        <strong>{passenger.name}</strong>
-                        <span>
-                          {passenger.code} - miejsce {passenger.seat} - {passenger.stop}
-                        </span>
-                      </div>
-                      <small>{passenger.luggage}</small>
-                    </article>
-                  );
-                })}
-              </div>
+      {!loading && !errorMessage && selectedTrip && (
+        <section className="driver-grid" aria-label="Panel kierowcy">
+          <aside className="driver-trips" aria-label="Dzisiejsze kursy">
+            <div className="driver-panel-heading">
+              <ClipboardList size={18} />
+              <h2>Dzisiejsze kursy</h2>
             </div>
 
-            <aside className="driver-controls">
-              <div className="driver-panel-heading">
-                <Radio size={18} />
-                <h2>Kontrola kursu</h2>
-              </div>
-
-              <div className="driver-control-buttons">
+            {driverTrips.map((trip) => {
+              const tripChecks = trip.passengers.filter((passenger) => passenger.checked).length;
+              return (
                 <button
-                  className={status === "boarding" ? "secondary-button active" : "secondary-button"}
-                  onClick={() => setTripStatus("boarding")}
+                  className={trip.id === selectedTrip.id ? "driver-trip active" : "driver-trip"}
+                  key={trip.id}
+                  onClick={() => setSelectedTripId(trip.id)}
                   type="button"
                 >
-                  Odprawa
-                </button>
-                <button
-                  className={status === "departed" ? "secondary-button active" : "secondary-button"}
-                  onClick={() => setTripStatus("departed")}
-                  type="button"
-                >
-                  Wyjazd
-                </button>
-                <button
-                  className={status === "delayed" ? "secondary-button active" : "secondary-button"}
-                  onClick={() => setTripStatus("delayed")}
-                  type="button"
-                >
-                  Opoznienie
-                </button>
-                <button
-                  className={status === "arrived" ? "secondary-button active" : "secondary-button"}
-                  onClick={() => setTripStatus("arrived")}
-                  type="button"
-                >
-                  Przyjazd
-                </button>
-              </div>
-
-              <div className="driver-stop-list">
-                {selectedTrip.stops.map((stop, index) => (
-                  <div className={index === activeStop ? "driver-stop active" : "driver-stop"} key={stop.title}>
-                    <strong>{stop.time}</strong>
-                    <span>{stop.title}</span>
-                    <small>
-                      +{stop.board} / -{stop.drop}
-                    </small>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                className="primary-button full"
-                disabled={activeStop === selectedTrip.stops.length - 1}
-                onClick={advanceStop}
-                type="button"
-              >
-                <MapPin size={18} />
-                Nastepny przystanek
-              </button>
-
-              <div className="driver-incident">
-                <label>
+                  <span className={`driver-status-dot ${trip.status}`} />
                   <span>
-                    <MessageSquare size={16} />
-                    Notatka / incydent
+                    <strong>{trip.departure}</strong>
+                    {trip.route}
                   </span>
-                  <textarea
-                    value={incident}
-                    onChange={(event) => setIncident(event.target.value)}
-                    placeholder="Np. korek, opoznienie, dodatkowy bagaz..."
-                    rows={4}
-                  />
-                </label>
-                <button className="secondary-button full" onClick={saveIncident} type="button">
-                  <AlertTriangle size={18} />
-                  Zapisz notatke
+                  <small>
+                    {tripChecks}/{trip.passengers.length}
+                  </small>
                 </button>
+              );
+            })}
+          </aside>
+
+          <div className="driver-main">
+            <section className="driver-trip-header">
+              <div>
+                <p className="eyebrow">{selectedTrip.reference}</p>
+                <h2>{selectedTrip.route}</h2>
+                <div className="driver-meta-row">
+                  <span>
+                    <Bus size={16} />
+                    {selectedTrip.vehicle}
+                  </span>
+                  {selectedTrip.plate && <span>{selectedTrip.plate}</span>}
+                  {selectedTrip.platform && <span>{selectedTrip.platform}</span>}
+                </div>
               </div>
-            </aside>
-          </section>
-        </div>
-      </section>
+              <div className="driver-trip-clock">
+                <Clock size={18} />
+                <strong>{selectedTrip.departure}</strong>
+                <span>{selectedTrip.arrival}</span>
+              </div>
+            </section>
+
+            <section className="driver-metrics" aria-label="Podsumowanie kursu">
+              <article>
+                <UserCheck size={18} />
+                <span>Odprawieni</span>
+                <strong>
+                  {checkedCount}/{passengerCount}
+                </strong>
+              </article>
+              <article>
+                <ShieldCheck size={18} />
+                <span>Status</span>
+                <strong>{statusLabels[status] || status}</strong>
+              </article>
+              <article>
+                <MapPin size={18} />
+                <span>Aktualny przystanek</span>
+                <strong>{selectedTrip.stops[activeStop]?.title || "-"}</strong>
+              </article>
+            </section>
+
+            <section className="driver-workspace">
+              <div className="driver-board">
+                <div className="driver-panel-heading">
+                  <ScanLine size={18} />
+                  <h2>Odprawa biletow</h2>
+                </div>
+
+                <form className="driver-scan" onSubmit={handleScan}>
+                  <label>
+                    <span>Kod biletu</span>
+                    <input
+                      value={scanCode}
+                      onChange={(event) => setScanCode(event.target.value)}
+                      placeholder="CB-..."
+                    />
+                  </label>
+                  <button className="primary-button" disabled={Boolean(savingKey)} type="submit">
+                    <QrCode size={18} />
+                    Sprawdz
+                  </button>
+                </form>
+
+                <div className="driver-progress" aria-label={`Odprawa ${completion}%`}>
+                  <span style={{ width: `${completion}%` }} />
+                </div>
+
+                <div className="driver-manifest">
+                  {selectedTrip.passengers.length === 0 && <p>Brak pasazerow na tym kursie.</p>}
+                  {selectedTrip.passengers.map((passenger) => {
+                    const checked = checkedSet.has(passenger.id);
+                    return (
+                      <article className={checked ? "manifest-row checked" : "manifest-row"} key={passenger.id}>
+                        <button
+                          aria-label={checked ? `Cofnij odprawe ${passenger.name}` : `Odpraw ${passenger.name}`}
+                          className="manifest-check"
+                          disabled={Boolean(savingKey)}
+                          onClick={() => setPassengerChecked(passenger, !checked)}
+                          type="button"
+                        >
+                          {checked ? <CheckCircle2 size={20} /> : <UserX size={20} />}
+                        </button>
+                        <div>
+                          <strong>{passenger.name}</strong>
+                          <span>
+                            {passenger.code} - miejsce {passenger.seat} - {passenger.stop}
+                          </span>
+                        </div>
+                        <small>{passenger.luggage}</small>
+                      </article>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <aside className="driver-controls">
+                <div className="driver-panel-heading">
+                  <Radio size={18} />
+                  <h2>Kontrola kursu</h2>
+                </div>
+
+                <div className="driver-control-buttons">
+                  <button
+                    className={status === "boarding" ? "secondary-button active" : "secondary-button"}
+                    disabled={statusActionDisabled("boarding")}
+                    onClick={() => setTripStatus("boarding")}
+                    type="button"
+                  >
+                    Odprawa
+                  </button>
+                  <button
+                    className={status === "departed" ? "secondary-button active" : "secondary-button"}
+                    disabled={statusActionDisabled("departed")}
+                    onClick={() => setTripStatus("departed")}
+                    type="button"
+                  >
+                    Wyjazd
+                  </button>
+                  <button
+                    className={status === "delayed" ? "secondary-button active" : "secondary-button"}
+                    disabled={statusActionDisabled("delayed")}
+                    onClick={() => setTripStatus("delayed")}
+                    type="button"
+                  >
+                    Opoznienie
+                  </button>
+                  <button
+                    className={status === "arrived" ? "secondary-button active" : "secondary-button"}
+                    disabled={statusActionDisabled("arrived")}
+                    onClick={() => setTripStatus("arrived")}
+                    type="button"
+                  >
+                    Przyjazd
+                  </button>
+                </div>
+
+                <div className="driver-stop-list">
+                  {selectedTrip.stops.map((stop, index) => (
+                    <div
+                      className={index === activeStop ? "driver-stop active" : "driver-stop"}
+                      key={`${stop.title}-${index}`}
+                    >
+                      <strong>{stop.time}</strong>
+                      <span>{stop.title}</span>
+                      <small>
+                        +{stop.board} / -{stop.drop}
+                      </small>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  className="primary-button full"
+                  disabled={activeStop === selectedTrip.stops.length - 1}
+                  onClick={advanceStop}
+                  type="button"
+                >
+                  <MapPin size={18} />
+                  Nastepny przystanek
+                </button>
+
+                <div className="driver-incident">
+                  <label>
+                    <span>
+                      <MessageSquare size={16} />
+                      Notatka / incydent
+                    </span>
+                    <textarea
+                      value={incident}
+                      onChange={(event) => setIncident(event.target.value)}
+                      placeholder="Np. korek, opoznienie, dodatkowy bagaz..."
+                      rows={4}
+                    />
+                  </label>
+                  <button
+                    className="secondary-button full"
+                    disabled={Boolean(savingKey)}
+                    onClick={saveIncident}
+                    type="button"
+                  >
+                    <AlertTriangle size={18} />
+                    Zapisz notatke
+                  </button>
+                </div>
+              </aside>
+            </section>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

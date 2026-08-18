@@ -177,6 +177,7 @@ export default function AdminDashboardPage() {
     handleSignIn,
     handleSignOut,
     staff,
+    isAdmin,
   } = useAdminAccess({
     missingMessage: text.supabaseMissing,
     permissionsFailedMessage: text.permissionsFailed,
@@ -941,36 +942,38 @@ export default function AdminDashboardPage() {
           </div>
         </aside>
 
-        <aside className="admin-panel compact">
-          <div className="admin-panel-header">
-            <div>
-              <p className="eyebrow">{text.access}</p>
-              <h2>{text.userRoles}</h2>
+        {isAdmin && (
+          <aside className="admin-panel compact">
+            <div className="admin-panel-header">
+              <div>
+                <p className="eyebrow">{text.access}</p>
+                <h2>{text.userRoles}</h2>
+              </div>
+              <UserCog size={18} />
             </div>
-            <UserCog size={18} />
-          </div>
-          <div className="admin-user-list">
-            {profiles.map((userProfile) => (
-              <article className="admin-user-row" key={userProfile.id}>
-                <div>
-                  <strong>{userProfile.full_name || text.unnamed}</strong>
-                  <span>{userProfile.phone || userProfile.id.slice(0, 8)}</span>
-                </div>
-                <select
-                  disabled={savingKey === `profile-${userProfile.id}`}
-                  value={userProfile.role}
-                  onChange={(event) => saveProfileRole(userProfile.id, event.target.value)}
-                >
-                  {Object.entries(roleLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </article>
-            ))}
-          </div>
-        </aside>
+            <div className="admin-user-list">
+              {profiles.map((userProfile) => (
+                <article className="admin-user-row" key={userProfile.id}>
+                  <div>
+                    <strong>{userProfile.full_name || text.unnamed}</strong>
+                    <span>{userProfile.phone || userProfile.id.slice(0, 8)}</span>
+                  </div>
+                  <select
+                    disabled={savingKey === `profile-${userProfile.id}`}
+                    value={userProfile.role}
+                    onChange={(event) => saveProfileRole(userProfile.id, event.target.value)}
+                  >
+                    {Object.entries(roleLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </article>
+              ))}
+            </div>
+          </aside>
+        )}
       </section>
 
       <section className="admin-panel admin-timeline-panel">

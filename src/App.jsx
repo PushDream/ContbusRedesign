@@ -10,6 +10,7 @@ import ContactPage from "./pages/ContactPage.jsx";
 import AdminDashboardPage from "./pages/AdminDashboardPage.jsx";
 import AdminSchedulesPage from "./pages/AdminSchedulesPage.jsx";
 import AccountPage from "./pages/AccountPage.jsx";
+import DriverAppPage from "./pages/DriverAppPage.jsx";
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
               <Route path="/booking" element={<BookingPage />} />
               <Route path="/moje-bilety" element={<MyTicketsPage />} />
               <Route path="/konto" element={<AccountPage />} />
+              <Route path="/driver" element={<DriverAppPage />} />
               <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/admin/schedules" element={<AdminSchedulesPage />} />
               <Route path="/kontakt" element={<ContactPage />} />

@@ -20,17 +20,6 @@ function timeText(value) {
   return String(value || "").slice(0, 5);
 }
 
-function isoDayOfWeek(value) {
-  const day = new Date(`${value}T00:00:00`).getDay();
-  return day === 0 ? 7 : day;
-}
-
-function contbusDirectionForRoute(originCode, destinationCode) {
-  if (originCode?.startsWith("LUB-") && !destinationCode?.startsWith("LUB-")) return "lublin_warszawa";
-  if (!originCode?.startsWith("LUB-") && destinationCode?.startsWith("LUB-")) return "warszawa_lublin";
-  return "";
-}
-
 function durationLabel(minutes) {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
@@ -107,7 +96,6 @@ export async function fetchDepartures({ from, to, date }) {
   const originCode = stationCodeByName[from];
   const destinationCode = stationCodeByName[to];
   const departureDate = toDateOnly(date);
-  const timetableDirection = contbusDirectionForRoute(originCode, destinationCode);
 
   if (!originCode || !destinationCode || originCode === destinationCode) {
     return [];
@@ -121,10 +109,12 @@ export async function fetchDepartures({ from, to, date }) {
     { data: stations, error: stationsError },
     { data: routes, error: routesError },
     { data: trips, error: tripsError },
-    activeTimetableResult,
   ] = await Promise.all([
-    supabase.from("stations").select("*").in("code", [originCode, destinationCode]),
-    supabase.from("routes").select("*").eq("active", true),
+    supabase.from("stations").select("id, code, name, city").in("code", [originCode, destinationCode]),
+    supabase
+      .from("routes")
+      .select("id, origin_station_id, destination_station_id, duration_minutes, base_price")
+      .eq("active", true),
     supabase.rpc("public_trip_schedule", { p_date: departureDate }),
     timetableDirection
       ? supabase
@@ -138,9 +128,6 @@ export async function fetchDepartures({ from, to, date }) {
   if (stationsError) throw stationsError;
   if (routesError) throw routesError;
   if (tripsError) throw tripsError;
-  if (activeTimetableResult.error && activeTimetableResult.error.code !== "42P01") {
-    throw activeTimetableResult.error;
-  }
 
   const stationByCode = Object.fromEntries((stations || []).map((station) => [station.code, station]));
   const route = (routes || []).find(
@@ -151,18 +138,8 @@ export async function fetchDepartures({ from, to, date }) {
 
   if (!route) return [];
 
-  const dayOfWeek = isoDayOfWeek(departureDate);
-  const activeTimes = !timetableDirection || activeTimetableResult.error
-    ? null
-    : new Set(
-        (activeTimetableResult.data || [])
-          .filter((departure) => (departure.days_of_week || []).includes(dayOfWeek))
-          .map((departure) => timeText(departure.departure_time)),
-      );
-
   return (trips || [])
     .filter((trip) => trip.route_id === route.id)
-    .filter((trip) => !activeTimes || activeTimes.has(timeText(trip.departure_time)))
     .map((trip) =>
       mapDbDeparture({
         trip,
@@ -228,81 +205,30 @@ export async function fetchCustomerBookings() {
   if (userError) throw userError;
   if (!user) return [];
 
-  const { data: bookings, error: bookingsError } = await supabase
-    .from("bookings")
-    .select("*")
-    .eq("customer_id", user.id)
-    .order("created_at", { ascending: false });
+  const { data, error } = await supabase.rpc("customer_booking_history");
+  if (error) throw error;
 
-  if (bookingsError) throw bookingsError;
-  if (!bookings?.length) return [];
+  let result = data;
+  if (typeof result === "string") result = JSON.parse(result);
+  const rows = Array.isArray(result) ? result : Array.isArray(result?.bookings) ? result.bookings : result ? [result] : [];
 
-  const bookingIds = bookings.map((booking) => booking.id);
-  const tripIds = [...new Set(bookings.map((booking) => booking.trip_id).filter(Boolean))];
-
-  const [
-    { data: passengers, error: passengersError },
-    { data: trips, error: tripsError },
-  ] = await Promise.all([
-    supabase.from("booking_passengers").select("*").in("booking_id", bookingIds),
-    supabase.from("trips").select("*").in("id", tripIds),
-  ]);
-
-  if (passengersError) throw passengersError;
-  if (tripsError) throw tripsError;
-
-  const routeIds = [...new Set((trips || []).map((trip) => trip.route_id).filter(Boolean))];
-  const routesResult = routeIds.length
-    ? await supabase.from("routes").select("*").in("id", routeIds)
-    : { data: [], error: null };
-  if (routesResult.error) throw routesResult.error;
-
-  const stationIds = [
-    ...new Set(
-      (routesResult.data || [])
-        .flatMap((route) => [route.origin_station_id, route.destination_station_id])
-        .filter(Boolean),
-    ),
-  ];
-  const stationsResult = stationIds.length
-    ? await supabase.from("stations").select("*").in("id", stationIds)
-    : { data: [], error: null };
-  if (stationsResult.error) throw stationsResult.error;
-
-  const passengersByBooking = (passengers || []).reduce((grouped, passenger) => {
-    grouped[passenger.booking_id] = grouped[passenger.booking_id] || [];
-    grouped[passenger.booking_id].push(passenger);
-    return grouped;
-  }, {});
-  const tripById = Object.fromEntries((trips || []).map((trip) => [trip.id, trip]));
-  const routeById = Object.fromEntries((routesResult.data || []).map((route) => [route.id, route]));
-  const stationById = Object.fromEntries((stationsResult.data || []).map((station) => [station.id, station]));
-
-  return bookings.map((booking) => {
-    const trip = tripById[booking.trip_id];
-    const route = routeById[trip?.route_id];
-    const origin = stationById[route?.origin_station_id];
-    const destination = stationById[route?.destination_station_id];
-    const bookingPassengers = passengersByBooking[booking.id] || [];
-
-    return {
-      id: booking.id,
-      reference: booking.booking_reference,
-      status: booking.status,
-      passengerCount: booking.passenger_count,
-      totalAmount: Number(booking.total_amount),
-      currency: booking.currency,
-      createdAt: booking.created_at,
-      buyerEmail: booking.buyer_email,
-      buyerName: booking.buyer_name,
-      route: `${formatStationName(origin?.name)} - ${formatStationName(destination?.name)}`,
-      departureDate: trip?.departure_date,
-      departureTime: timeText(trip?.departure_time),
-      arrivalTime: timeText(trip?.arrival_time),
-      seatNumbers: bookingPassengers.map((passenger) => passenger.seat_number),
-      ticketCodes: bookingPassengers.map((passenger) => passenger.ticket_code),
-    };
-  });
+  return rows.map((booking) => ({
+    id: booking.id || booking.booking_id,
+    reference: booking.reference || booking.booking_reference,
+    status: booking.status || booking.booking_status,
+    passengerCount: Number(booking.passengerCount ?? booking.passenger_count ?? 0),
+    totalAmount: Number(booking.totalAmount ?? booking.total_amount ?? 0),
+    currency: booking.currency || "PLN",
+    createdAt: booking.createdAt || booking.created_at,
+    buyerEmail: booking.buyerEmail || booking.buyer_email,
+    buyerName: booking.buyerName || booking.buyer_name,
+    route: booking.route || booking.route_label || "Trasa",
+    departureDate: booking.departureDate || booking.departure_date,
+    departureTime: timeText(booking.departureTime || booking.departure_time),
+    arrivalTime: timeText(booking.arrivalTime || booking.arrival_time),
+    seatNumbers: booking.seatNumbers || booking.seat_numbers || [],
+    ticketCodes: booking.ticketCodes || booking.ticket_codes || [],
+  }));
 }
 
 function mapLookupBooking(booking) {
@@ -397,14 +323,12 @@ async function fetchPublicDispatcherOverview(date) {
     { data: routes, error: routesError },
     { data: trips, error: tripsError },
   ] = await Promise.all([
-    supabase.from("stations").select("*").eq("active", true),
-    supabase.from("routes").select("*").eq("active", true),
+    supabase.from("stations").select("id, code, name, city").eq("active", true),
     supabase
-      .from("trips")
-      .select("*")
-      .eq("departure_date", date)
-      .neq("status", "cancelled")
-      .order("departure_time", { ascending: true }),
+      .from("routes")
+      .select("id, code, origin_station_id, destination_station_id, duration_minutes, base_price")
+      .eq("active", true),
+    supabase.rpc("public_trip_schedule", { p_date: date }),
   ]);
 
   if (stationsError) throw stationsError;
@@ -500,15 +424,22 @@ export async function fetchAdminOperations(date) {
     { data: vehicles, error: vehiclesError },
     { data: profiles, error: profilesError },
   ] = await Promise.all([
-    supabase.from("stations").select("*").eq("active", true),
-    supabase.from("routes").select("*").eq("active", true),
+    supabase.from("stations").select("id, code, name, city").eq("active", true),
+    supabase
+      .from("routes")
+      .select("id, code, origin_station_id, destination_station_id, duration_minutes, base_price")
+      .eq("active", true),
     supabase
       .from("trips")
-      .select("*")
+      .select("id, route_id, departure_date, departure_time, arrival_time, status, driver_id, vehicle_id, platform, capacity, price")
       .eq("departure_date", operationsDate)
       .neq("status", "cancelled")
       .order("departure_time", { ascending: true }),
-    supabase.from("vehicles").select("*").eq("active", true).order("label", { ascending: true }),
+    supabase
+      .from("vehicles")
+      .select("id, label, plate_number, seats_total")
+      .eq("active", true)
+      .order("label", { ascending: true }),
     supabase.from("profiles").select("id, role, full_name, phone, created_at").order("created_at", { ascending: false }),
   ]);
 
@@ -520,7 +451,11 @@ export async function fetchAdminOperations(date) {
 
   const tripIds = (trips || []).map((trip) => trip.id);
   const { data: bookings, error: bookingsError } = tripIds.length
-    ? await supabase.from("bookings").select("*").in("trip_id", tripIds).order("created_at", { ascending: false })
+    ? await supabase
+        .from("bookings")
+        .select("id, booking_reference, trip_id, buyer_name, buyer_email, buyer_phone, passenger_count, status, total_amount, currency, created_at")
+        .in("trip_id", tripIds)
+        .order("created_at", { ascending: false })
     : { data: [], error: null };
   if (bookingsError) throw bookingsError;
 
@@ -532,14 +467,31 @@ export async function fetchAdminOperations(date) {
     { data: events, error: eventsError },
   ] = await Promise.all([
     bookingIds.length
-      ? supabase.from("booking_passengers").select("*").in("booking_id", bookingIds)
+      ? supabase
+          .from("booking_passengers")
+          .select("id, booking_id, full_name, seat_number, ticket_code, check_in_status, checked_in_at, checked_in_by")
+          .in("booking_id", bookingIds)
       : { data: [], error: null },
-    bookingIds.length ? supabase.from("payments").select("*").in("booking_id", bookingIds) : { data: [], error: null },
-    tripIds.length
-      ? supabase.from("trip_incidents").select("*").in("trip_id", tripIds).order("created_at", { ascending: false })
+    bookingIds.length
+      ? supabase
+          .from("payments")
+          .select("id, booking_id, provider, provider_reference, status, amount, currency, created_at")
+          .in("booking_id", bookingIds)
       : { data: [], error: null },
     tripIds.length
-      ? supabase.from("trip_events").select("*").in("trip_id", tripIds).order("created_at", { ascending: false }).limit(40)
+      ? supabase
+          .from("trip_incidents")
+          .select("id, trip_id, driver_id, severity, note, created_at")
+          .in("trip_id", tripIds)
+          .order("created_at", { ascending: false })
+      : { data: [], error: null },
+    tripIds.length
+      ? supabase
+          .from("trip_events")
+          .select("id, trip_id, actor_id, event_type, payload, created_at")
+          .in("trip_id", tripIds)
+          .order("created_at", { ascending: false })
+          .limit(40)
       : { data: [], error: null },
   ]);
 
