@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowLeftRight, ArrowRight, CalendarDays, Clock, MapPin, Search, Users } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUp, CalendarDays, Clock, MapPin, Search, Users } from "lucide-react";
 import { useApp } from "../context/AppContext.jsx";
 import { fares } from "../data/content.js";
 import { fetchDepartures } from "../lib/database.js";
+
+const BOOKING_CUTOFF_MINUTES = 15;
 
 function getTodayDate() {
   const date = new Date();
@@ -11,6 +13,16 @@ function getTodayDate() {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function timeToMinutes(timeText) {
+  const [hours, minutes] = String(timeText || "").split(":").map(Number);
+  return (hours || 0) * 60 + (minutes || 0);
+}
+
+function getNowMinutes() {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
 }
 
 export default function ResultsPage() {
@@ -26,6 +38,7 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [editingSearch, setEditingSearch] = useState(false);
+  const [showEarlier, setShowEarlier] = useState(false);
   const [draftFrom, setDraftFrom] = useState(from);
   const [draftTo, setDraftTo] = useState(to);
   const [draftDate, setDraftDate] = useState(date);
@@ -47,11 +60,13 @@ export default function ResultsPage() {
         if (!active) return;
         setDepartures(items);
         setErrorMessage("");
+        setShowEarlier(false);
       })
       .catch((error) => {
         if (!active) return;
         setDepartures([]);
         setErrorMessage(error.message || "Nie udało się pobrać kursów.");
+        setShowEarlier(false);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -61,6 +76,24 @@ export default function ResultsPage() {
       active = false;
     };
   }, [date, from, to]);
+
+  const isTravelToday = date === getTodayDate();
+  const nowMinutes = isTravelToday ? getNowMinutes() : null;
+
+  const { upcomingDepartures, pastDepartures } = useMemo(() => {
+    if (!isTravelToday) return { upcomingDepartures: departures, pastDepartures: [] };
+
+    const upcoming = [];
+    const past = [];
+    departures.forEach((departure) => {
+      if (timeToMinutes(departure.departureTime) < nowMinutes) {
+        past.push(departure);
+      } else {
+        upcoming.push(departure);
+      }
+    });
+    return { upcomingDepartures: upcoming, pastDepartures: past };
+  }, [departures, isTravelToday, nowMinutes]);
 
   const handleBook = (departure) => {
     const params = new URLSearchParams({
@@ -184,7 +217,7 @@ export default function ResultsPage() {
           </div>
         )}
 
-        {!loading && !errorMessage && departures.length === 0 && (
+        {!loading && !errorMessage && upcomingDepartures.length === 0 && pastDepartures.length === 0 && (
           <div className="secure-box manage-empty">
             <span>Brak kursów dla wybranej trasy i daty.</span>
           </div>
@@ -202,9 +235,53 @@ export default function ResultsPage() {
           </div>
         )}
 
-        {departures.map((departure) => {
+        {!loading && !errorMessage && pastDepartures.length > 0 && (
+          <button
+            className="results-earlier-toggle"
+            onClick={() => setShowEarlier((value) => !value)}
+            type="button"
+          >
+            <ArrowUp size={14} />
+            {showEarlier ? "Ukryj wcześniejsze kursy" : "Pokaż wcześniejsze kursy"}
+          </button>
+        )}
+
+        {!loading && !errorMessage && showEarlier &&
+          pastDepartures.map((departure) => (
+            <article className="result-card result-card-past" key={departure.tripId}>
+              <div className="result-card-times">
+                <div className="result-time">
+                  <strong>{departure.departureTime}</strong>
+                  <span>{from}</span>
+                  {departure.platform && <span className="result-platform">{departure.platform}</span>}
+                </div>
+                <div className="result-duration">
+                  <div className="result-duration-line" />
+                  <span>{departure.duration}</span>
+                </div>
+                <div className="result-time result-time-right">
+                  <strong>{departure.arrivalTime}</strong>
+                  <span>{to}</span>
+                </div>
+              </div>
+
+              <div className="result-card-meta">
+                <span className="result-note">{departure.note}</span>
+              </div>
+
+              <div className="result-card-action">
+                <span className="result-past-note">Kurs już odjechał</span>
+              </div>
+            </article>
+          ))}
+
+        {!loading && !errorMessage && upcomingDepartures.map((departure) => {
           const seats = departure.capacity;
           const totalPrice = departure.price * passengers;
+          const minutesUntilDeparture = isTravelToday
+            ? timeToMinutes(departure.departureTime) - nowMinutes
+            : null;
+          const isBoardingSoon = minutesUntilDeparture !== null && minutesUntilDeparture <= BOOKING_CUTOFF_MINUTES;
 
           return (
             <article className="result-card" key={departure.tripId}>
@@ -240,9 +317,14 @@ export default function ResultsPage() {
                     </small>
                   )}
                 </div>
-                <button className="primary-button" onClick={() => handleBook(departure)} type="button">
-                  Kup bilet
-                  <ArrowRight size={16} />
+                <button
+                  className="primary-button"
+                  disabled={isBoardingSoon}
+                  onClick={() => handleBook(departure)}
+                  type="button"
+                >
+                  {isBoardingSoon ? "Odjazd wkrótce" : "Kup bilet"}
+                  {!isBoardingSoon && <ArrowRight size={16} />}
                 </button>
               </div>
             </article>

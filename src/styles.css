@@ -4201,6 +4201,40 @@ h3 {
   box-shadow: 0 4px 20px var(--shadow-strong);
 }
 
+.results-earlier-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  padding: 6px 4px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.results-earlier-toggle:hover {
+  color: var(--brand);
+}
+
+.result-card-past {
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+.result-card-past:hover {
+  border-color: var(--border-soft);
+  box-shadow: none;
+}
+
+.result-past-note {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-style: italic;
+}
+
 .result-card-times {
   display: flex;
   align-items: center;
