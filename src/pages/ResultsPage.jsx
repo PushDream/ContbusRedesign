@@ -8,11 +8,7 @@ import { fetchDepartures } from "../lib/database.js";
 const BOOKING_CUTOFF_MINUTES = 15;
 
 function getTodayDate() {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Warsaw" });
 }
 
 function timeToMinutes(timeText) {
@@ -21,8 +17,8 @@ function timeToMinutes(timeText) {
 }
 
 function getNowMinutes() {
-  const now = new Date();
-  return now.getHours() * 60 + now.getMinutes();
+  const warsawTime = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Warsaw" }));
+  return warsawTime.getHours() * 60 + warsawTime.getMinutes();
 }
 
 export default function ResultsPage() {
