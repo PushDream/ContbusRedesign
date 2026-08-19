@@ -314,8 +314,11 @@ export default function ResultsPage() {
                   )}
                 </div>
                 <button
-                  className="primary-button"
-                  disabled={isBoardingSoon}
+                  className={
+                    isBoardingSoon
+                      ? "primary-button boarding-soon-btn"
+                      : "primary-button"
+                  }
                   onClick={() => handleBook(departure)}
                   type="button"
                 >

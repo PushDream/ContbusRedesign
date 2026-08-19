@@ -3386,6 +3386,10 @@ h3 {
   opacity: 0.5;
 }
 
+.boarding-soon-btn {
+  box-shadow: inset 0 0 0 2px #f5a623;
+}
+
 /* ---------- Live tracker ---------- */
 
 .tracker-panel {
