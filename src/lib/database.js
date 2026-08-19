@@ -116,13 +116,6 @@ export async function fetchDepartures({ from, to, date }) {
       .select("id, origin_station_id, destination_station_id, duration_minutes, base_price")
       .eq("active", true),
     supabase.rpc("public_trip_schedule", { p_date: departureDate }),
-    timetableDirection
-      ? supabase
-          .from("contbus_departures")
-          .select("departure_time, days_of_week")
-          .eq("is_active", true)
-          .eq("direction", timetableDirection)
-      : Promise.resolve({ data: null, error: null }),
   ]);
 
   if (stationsError) throw stationsError;
