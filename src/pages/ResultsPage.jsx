@@ -233,6 +233,7 @@ export default function ResultsPage() {
 
         {!loading && !errorMessage && pastDepartures.length > 0 && (
           <button
+            aria-expanded={showEarlier}
             className="results-earlier-toggle"
             onClick={() => setShowEarlier((value) => !value)}
             type="button"

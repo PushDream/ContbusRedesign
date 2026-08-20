@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Languages, Menu, Moon, Sun, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { logoUrl } from "../data/content.js";
@@ -19,6 +20,28 @@ export default function Header({
   t,
 }) {
   const { profile } = useAuth();
+  const headerRef = useRef(null);
+
+  useEffect(() => {
+    if (!mobileNav) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setMobileNav(false);
+    };
+    const handleClickOutside = (event) => {
+      if (headerRef.current && !headerRef.current.contains(event.target)) {
+        setMobileNav(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handleClickOutside);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handleClickOutside);
+    };
+  }, [mobileNav, setMobileNav]);
+
   const navLinks = [
     { to: "/", label: t.navHome, end: true },
     { to: "/results", label: t.nav[1] },
@@ -31,7 +54,7 @@ export default function Header({
   ];
 
   return (
-    <header className="topbar">
+    <header className="topbar" ref={headerRef}>
       <NavLink className="brand" to="/" aria-label="Contbus">
         <img src={logoUrl} alt="Contbus" />
       </NavLink>
