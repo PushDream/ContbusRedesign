@@ -505,6 +505,15 @@ h3 {
   outline: 0;
 }
 
+.date-input-native::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  cursor: pointer;
+}
+
 .date-display {
   position: absolute;
   top: 0;

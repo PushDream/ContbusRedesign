@@ -29,6 +29,17 @@ function formatDisplayDate(value, language) {
   return new Date(`${value}T00:00:00`).toLocaleDateString(locale, options);
 }
 
+function handleDatePickerClick(event) {
+  const input = event.currentTarget;
+  if (typeof input.showPicker !== "function") return;
+
+  try {
+    input.showPicker();
+  } catch {
+    // Keep the browser's trusted native click as the fallback.
+  }
+}
+
 export default function BookingSearch({ passengers, setPassengers }) {
   const { t, language } = useApp();
   const navigate = useNavigate();
@@ -110,6 +121,7 @@ export default function BookingSearch({ passengers, setPassengers }) {
               className="date-input-native"
               type="date"
               value={date}
+              onClick={handleDatePickerClick}
               onChange={(e) => setDate(e.target.value)}
             />
             <span aria-hidden="true" className="date-display">
@@ -126,6 +138,7 @@ export default function BookingSearch({ passengers, setPassengers }) {
                 className="date-input-native"
                 type="date"
                 value={returnDate}
+                onClick={handleDatePickerClick}
                 onChange={(e) => setReturnDate(e.target.value)}
               />
               <span aria-hidden="true" className="date-display">
