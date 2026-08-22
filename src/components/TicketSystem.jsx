@@ -222,6 +222,7 @@ export default function TicketSystem({ activeFare, passengers, setActiveFare, se
                     <span>{t.passengers}</span>
                     <div className="stepper">
                       <button
+                        aria-label="Decrease passengers"
                         type="button"
                         onClick={() => {
                           setPassengers((value) => Math.max(1, value - 1));
@@ -232,6 +233,7 @@ export default function TicketSystem({ activeFare, passengers, setActiveFare, se
                       </button>
                       <strong>{passengers}</strong>
                       <button
+                        aria-label="Increase passengers"
                         type="button"
                         onClick={() => setPassengers((value) => Math.min(8, value + 1))}
                       >
@@ -245,6 +247,7 @@ export default function TicketSystem({ activeFare, passengers, setActiveFare, se
                 <div className="departure-grid">
                   {departureTimes.map((time, index) => (
                     <button
+                      aria-pressed={selectedDeparture === index}
                       className={
                         selectedDeparture === index ? "departure-card active" : "departure-card"
                       }
@@ -279,6 +282,7 @@ export default function TicketSystem({ activeFare, passengers, setActiveFare, se
                   <label>
                     <span>{t.fieldName}</span>
                     <input
+                      autoComplete="name"
                       value={buyer.name}
                       onChange={(event) => updateBuyer("name", event.target.value)}
                     />
@@ -286,6 +290,8 @@ export default function TicketSystem({ activeFare, passengers, setActiveFare, se
                   <label>
                     <span>{t.fieldTicketEmail}</span>
                     <input
+                      autoComplete="email"
+                      spellCheck={false}
                       type="email"
                       value={buyer.email}
                       onChange={(event) => updateBuyer("email", event.target.value)}
@@ -294,6 +300,8 @@ export default function TicketSystem({ activeFare, passengers, setActiveFare, se
                   <label>
                     <span>{t.fieldPhone}</span>
                     <input
+                      autoComplete="tel"
+                      type="tel"
                       value={buyer.phone}
                       onChange={(event) => updateBuyer("phone", event.target.value)}
                     />
@@ -355,6 +363,7 @@ export default function TicketSystem({ activeFare, passengers, setActiveFare, se
                                 : t.extraPriority;
                           return (
                             <button
+                              aria-pressed={extras[extra.id]}
                               className={extras[extra.id] ? "extra-card active" : "extra-card"}
                               key={extra.id}
                               onClick={() =>
@@ -384,6 +393,7 @@ export default function TicketSystem({ activeFare, passengers, setActiveFare, se
                 <div className="payment-methods">
                   {paymentMethods.map((method) => (
                     <button
+                      aria-pressed={paymentMethod === method}
                       className={paymentMethod === method ? "payment-card active" : "payment-card"}
                       key={method}
                       type="button"
@@ -401,6 +411,7 @@ export default function TicketSystem({ activeFare, passengers, setActiveFare, se
                     <input
                       onChange={(event) => setPromoInput(event.target.value)}
                       placeholder={t.promoPlaceholder}
+                      spellCheck={false}
                       value={promoInput}
                     />
                   </label>
@@ -447,6 +458,8 @@ export default function TicketSystem({ activeFare, passengers, setActiveFare, se
                   <label>
                     <span>{t.resendEmailLabel}</span>
                     <input
+                      autoComplete="email"
+                      spellCheck={false}
                       type="email"
                       placeholder={t.resendPlaceholder}
                       value={downloadEmail}
@@ -478,7 +491,7 @@ export default function TicketSystem({ activeFare, passengers, setActiveFare, se
           <aside className="ticket-summary">
             <div className="mobile-ticket">
               <div className="mobile-ticket-top">
-                <img src={logoUrl} alt="Contbus" />
+                <img src={logoUrl} alt="Contbus" width={118} height={21} />
                 <span>{bookingCode}</span>
               </div>
               <div className="mobile-ticket-route">

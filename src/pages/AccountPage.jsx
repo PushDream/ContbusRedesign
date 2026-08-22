@@ -214,7 +214,7 @@ export default function AccountPage() {
             type="button"
           >
             <GoogleIcon />
-            {socialSubmitting ? "Łączenie z Google..." : "Kontynuuj przez Google"}
+            {socialSubmitting ? "Łączenie z Google…" : "Kontynuuj przez Google"}
           </button>
 
           <div className="account-divider">
@@ -278,6 +278,7 @@ export default function AccountPage() {
                 autoComplete="email"
                 onChange={(event) => updateField("email", event.target.value)}
                 required
+                spellCheck={false}
                 type="email"
                 value={credentials.email}
               />
@@ -293,8 +294,8 @@ export default function AccountPage() {
                 value={credentials.password}
               />
             </label>
-            {authError && <div className="account-error">{authError}</div>}
-            {authMessage && <div className="account-success">{authMessage}</div>}
+            {authError && <div className="account-error" aria-live="polite">{authError}</div>}
+            {authMessage && <div className="account-success" aria-live="polite">{authMessage}</div>}
             <button className="primary-button" disabled={submitting} type="submit">
               {submitting ? "Proszę czekać..." : mode === "signup" ? "Utwórz konto" : "Zaloguj się"}
             </button>
@@ -351,7 +352,7 @@ export default function AccountPage() {
             </button>
           </div>
 
-          {bookingsError && <div className="account-error inline">{bookingsError}</div>}
+          {bookingsError && <div className="account-error inline" aria-live="polite">{bookingsError}</div>}
           {loadingBookings && (
             <div aria-label="Ładowanie rezerwacji" className="account-booking-list skeleton-list" role="status">
               {[1, 2].map((item) => (

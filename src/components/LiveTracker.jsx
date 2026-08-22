@@ -37,7 +37,7 @@ export default function LiveTracker({ activeFare, t }) {
       <div className="tracker-card">
         <div className="tracker-top">
           <div>
-            <span className="tracker-status-pill">
+            <span className="tracker-status-pill" aria-live="polite">
               <Navigation2 size={14} />
               {status}
             </span>
@@ -51,7 +51,13 @@ export default function LiveTracker({ activeFare, t }) {
           </div>
         </div>
 
-        <div className="tracker-track">
+        <div
+          className="tracker-track"
+          role="progressbar"
+          aria-valuenow={Math.round(progress * 100)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
           <div className="tracker-fill" style={{ width: `${progress * 100}%` }} />
           <div className="tracker-bus" style={{ left: `${progress * 100}%` }}>
             <Bus size={18} />

@@ -356,6 +356,8 @@ export default function DriverAppPage() {
                   <label>
                     <span>Kod biletu</span>
                     <input
+                      autoComplete="off"
+                      spellCheck={false}
                       value={scanCode}
                       onChange={(event) => setScanCode(event.target.value)}
                       placeholder="CB-..."
@@ -367,7 +369,14 @@ export default function DriverAppPage() {
                   </button>
                 </form>
 
-                <div className="driver-progress" aria-label={`Odprawa ${completion}%`}>
+                <div
+                  aria-label={`Odprawa ${completion}%`}
+                  aria-valuemax={100}
+                  aria-valuemin={0}
+                  aria-valuenow={completion}
+                  className="driver-progress"
+                  role="progressbar"
+                >
                   <span style={{ width: `${completion}%` }} />
                 </div>
 
@@ -474,7 +483,7 @@ export default function DriverAppPage() {
                     <textarea
                       value={incident}
                       onChange={(event) => setIncident(event.target.value)}
-                      placeholder="Np. korek, opoznienie, dodatkowy bagaz..."
+                      placeholder="Np. korek, opoznienie, dodatkowy bagaz…"
                       rows={4}
                     />
                   </label>

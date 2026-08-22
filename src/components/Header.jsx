@@ -56,12 +56,13 @@ export default function Header({
   return (
     <header className="topbar" ref={headerRef}>
       <NavLink className="brand" to="/" aria-label="Contbus">
-        <img src={logoUrl} alt="Contbus" />
+        <img src={logoUrl} alt="Contbus" width={166} height={30} />
       </NavLink>
 
       <button
         className="icon-button menu-button"
         aria-label={t.menuLabel}
+        aria-expanded={mobileNav}
         onClick={() => setMobileNav((open) => !open)}
         type="button"
       >

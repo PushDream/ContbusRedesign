@@ -74,6 +74,7 @@ function DaysPicker({ value, onToggle, text, disabled }) {
         const active = value.includes(day);
         return (
           <button
+            aria-pressed={active}
             className={active ? "admin-day-chip active" : "admin-day-chip"}
             disabled={disabled}
             key={day}
@@ -618,6 +619,7 @@ export default function AdminSchedulesPage() {
                       <span>{departure.trip_type === "express" ? text.tripTypeExpress : text.tripTypeRegular}</span>
                       <label className="admin-toggle">
                         <input
+                          aria-label={departure.is_active ? "Active" : "Inactive"}
                           checked={departure.is_active}
                           disabled={!isAdmin || savingKey === `departure-${departure.id}`}
                           onChange={() => toggleDepartureActive(departure)}
@@ -627,6 +629,7 @@ export default function AdminSchedulesPage() {
                       </label>
                       <div className="admin-departure-actions">
                         <button
+                          aria-label={text.deleteDeparture || "Delete"}
                           className="admin-icon-button danger"
                           disabled={!isAdmin}
                           onClick={() => setPendingDelete(departure)}
@@ -894,7 +897,7 @@ export default function AdminSchedulesPage() {
             <div className="admin-modal" onClick={(event) => event.stopPropagation()}>
               <div className="admin-modal-header">
                 <h3>{text.addDeparture}</h3>
-                <button className="admin-icon-button" onClick={closeModal} type="button">
+                <button aria-label="Close" className="admin-icon-button" onClick={closeModal} type="button">
                   <X size={18} />
                 </button>
               </div>
@@ -963,7 +966,7 @@ export default function AdminSchedulesPage() {
             <div className="admin-modal small" onClick={(event) => event.stopPropagation()}>
               <div className="admin-modal-header">
                 <h3>{text.confirmDeleteDepartureTitle}</h3>
-                <button className="admin-icon-button" onClick={() => setPendingDelete(null)} type="button">
+                <button aria-label="Close" className="admin-icon-button" onClick={() => setPendingDelete(null)} type="button">
                   <X size={18} />
                 </button>
               </div>

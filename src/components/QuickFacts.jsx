@@ -20,7 +20,7 @@ export default function QuickFacts({ t }) {
       </article>
       <article>
         <Phone size={21} />
-        <strong>607 669 080</strong>
+        <strong>607&nbsp;669&nbsp;080</strong>
         <span>09:00 - 17:00</span>
       </article>
     </section>

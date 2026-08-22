@@ -133,7 +133,7 @@ export default function ResultsPage() {
     <div className="page-wrapper results-page">
       <div className="results-header">
         <Link to="/" className="back-link">
-          <ArrowLeft size={16} />
+          <ArrowLeft size={16} aria-hidden="true" />
           {t.navHome}
         </Link>
         <div className="results-route-summary">
@@ -142,15 +142,15 @@ export default function ResultsPage() {
           </h1>
           <div className="results-meta">
             <span>
-              <MapPin size={14} />
+              <MapPin size={14} aria-hidden="true" />
               {matchedFare.duration}
             </span>
             <span>
-              <Users size={14} />
+              <Users size={14} aria-hidden="true" />
               {passengers} {t.passengerUnit}
             </span>
             <span>
-              <Clock size={14} />
+              <Clock size={14} aria-hidden="true" />
               {dateFormatted}
             </span>
           </div>
@@ -191,7 +191,7 @@ export default function ResultsPage() {
           <label>
             <span>Data podróży</span>
             <div className="results-date-input">
-              <CalendarDays size={16} />
+              <CalendarDays size={16} aria-hidden="true" />
               <input min={getTodayDate()} type="date" value={draftDate} onChange={(event) => setDraftDate(event.target.value)} />
             </div>
           </label>
@@ -208,7 +208,7 @@ export default function ResultsPage() {
 
       <div className="results-list">
         {!loading && errorMessage && (
-          <div className="secure-box manage-empty">
+          <div className="secure-box manage-empty" aria-live="polite">
             <span>{errorMessage}</span>
           </div>
         )}

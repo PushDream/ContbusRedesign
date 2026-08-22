@@ -575,6 +575,7 @@ export default function AdminDashboardPage() {
           <label>
             <CalendarDays size={17} />
             <input
+              aria-label="Date"
               type="date"
               value={date}
               onChange={(event) => {
@@ -846,6 +847,7 @@ export default function AdminDashboardPage() {
                     ))}
                   </div>
                   <button
+                    aria-label={text.exportManifest || "Download"}
                     className="admin-icon-button"
                     disabled={!selectedTripBookings.length}
                     onClick={exportSelectedManifest}

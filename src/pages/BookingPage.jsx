@@ -288,6 +288,7 @@ export default function BookingPage() {
                 <label className={errors.firstName ? "has-error" : ""}>
                   <span>Imię</span>
                   <input
+                    autoComplete="given-name"
                     value={buyer.firstName}
                     onChange={(e) => updateBuyer("firstName", e.target.value)}
                     placeholder="Jan"
@@ -297,6 +298,7 @@ export default function BookingPage() {
                 <label className={errors.lastName ? "has-error" : ""}>
                   <span>Nazwisko</span>
                   <input
+                    autoComplete="family-name"
                     value={buyer.lastName}
                     onChange={(e) => updateBuyer("lastName", e.target.value)}
                     placeholder="Kowalski"
@@ -306,6 +308,7 @@ export default function BookingPage() {
                 <label className={errors.email ? "has-error" : ""}>
                   <span>{t.fieldTicketEmail}</span>
                   <input
+                    autoComplete="email"
                     type="email"
                     value={buyer.email}
                     onChange={(e) => updateBuyer("email", e.target.value)}
@@ -316,6 +319,7 @@ export default function BookingPage() {
                 <label className={errors.phone ? "has-error" : ""}>
                   <span>{t.fieldPhone}</span>
                   <input
+                    autoComplete="tel"
                     type="tel"
                     value={buyer.phone}
                     onChange={(e) => updateBuyer("phone", e.target.value)}
@@ -462,7 +466,7 @@ export default function BookingPage() {
                   Wróć
                 </button>
                 <button className="primary-button" disabled={submitting} type="button" onClick={confirmPayment}>
-                  {submitting ? "Zapisywanie..." : `Kup bilet · ${total} zł`}
+                  {submitting ? "Zapisywanie…" : `Kup bilet · ${total} zł`}
                   <ArrowRight size={18} />
                 </button>
               </div>
@@ -520,7 +524,7 @@ export default function BookingPage() {
           <aside className="booking-sidebar">
             <div className="mobile-ticket">
               <div className="mobile-ticket-top">
-                <img src={logoUrl} alt="Contbus" />
+                <img src={logoUrl} alt="Contbus" width={118} height={21} />
                 <span>{displayBookingCode}</span>
               </div>
               <div className="mobile-ticket-route">

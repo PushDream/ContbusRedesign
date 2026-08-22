@@ -32,11 +32,11 @@ export function ToastProvider({ children }) {
         {toasts.map((toast) => (
           <div className={`toast toast-${toast.tone}`} key={toast.id}>
             {toast.tone === "error" ? (
-              <TriangleAlert size={18} />
+              <TriangleAlert size={18} aria-hidden="true" />
             ) : toast.tone === "info" ? (
-              <Info size={18} />
+              <Info size={18} aria-hidden="true" />
             ) : (
-              <CheckCircle2 size={18} />
+              <CheckCircle2 size={18} aria-hidden="true" />
             )}
             <span>{toast.message}</span>
             <button

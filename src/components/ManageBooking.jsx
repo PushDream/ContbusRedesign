@@ -110,6 +110,7 @@ export default function ManageBooking({ t }) {
           <label>
             <span>{t.manageCode}</span>
             <input
+              autoComplete="off"
               onChange={(event) => setCode(event.target.value)}
               placeholder="CB-LUB-4827"
               value={code}
@@ -118,6 +119,8 @@ export default function ManageBooking({ t }) {
           <label>
             <span>{t.manageEmail}</span>
             <input
+              autoComplete="email"
+              spellCheck={false}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="jan.kowalski@email.com"
               type="email"
@@ -126,12 +129,12 @@ export default function ManageBooking({ t }) {
           </label>
           <button className="primary-button full" disabled={loading} type="submit">
             <Search size={18} />
-            {loading ? "Sprawdzanie..." : t.manageFind}
+            {loading ? "Sprawdzanie…" : t.manageFind}
           </button>
         </form>
 
         {searched && !loading && !booking && (
-          <div className="secure-box manage-empty">
+          <div className="secure-box manage-empty" aria-live="polite">
             <TriangleAlert size={20} />
             <span>{t.manageNotFound}</span>
           </div>

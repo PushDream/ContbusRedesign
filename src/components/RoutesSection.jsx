@@ -45,6 +45,7 @@ export default function RoutesSection({ activeFare, setActiveFare, passengers, t
             ["duration", t.sortDuration],
           ].map(([key, label]) => (
             <button
+              aria-pressed={sortBy === key}
               className={sortBy === key ? "active" : ""}
               key={key}
               onClick={() => setSortBy(key)}
@@ -60,6 +61,7 @@ export default function RoutesSection({ activeFare, setActiveFare, passengers, t
         <div className="fare-list">
           {sortedFares.map(({ fare, index }) => (
             <button
+              aria-pressed={activeFare.id === fare.id}
               className={activeFare.id === fare.id ? "fare-card active" : "fare-card"}
               key={fare.id}
               type="button"

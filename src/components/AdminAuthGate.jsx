@@ -39,6 +39,7 @@ export default function AdminAuthGate({
             <span>{text.email}</span>
             <input
               autoComplete="email"
+              spellCheck={false}
               type="email"
               value={credentials.email}
               onChange={(event) => setCredentials((current) => ({ ...current, email: event.target.value }))}
@@ -53,7 +54,7 @@ export default function AdminAuthGate({
               onChange={(event) => setCredentials((current) => ({ ...current, password: event.target.value }))}
             />
           </label>
-          {authError && <div className="admin-auth-error">{authError}</div>}
+          {authError && <div className="admin-auth-error" aria-live="polite">{authError}</div>}
           <button className="primary-button full" disabled={signingIn} type="submit">
             {signingIn ? text.signingIn : text.signIn}
           </button>
@@ -70,7 +71,7 @@ export default function AdminAuthGate({
           <p className="eyebrow">{text.noAccessEyebrow}</p>
           <h1>{text.noAccessTitle}</h1>
           <p>{text.noAccessBody}</p>
-          {authError && <div className="admin-auth-error">{authError}</div>}
+          {authError && <div className="admin-auth-error" aria-live="polite">{authError}</div>}
           <button className="secondary-button full" onClick={handleSignOut} type="button">
             <LogOut size={17} />
             {text.logout}

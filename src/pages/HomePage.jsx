@@ -25,11 +25,11 @@ export default function HomePage() {
             <p>{t.heroLead}</p>
             <div className="hero-actions">
               <Link className="primary-button" to="/results">
-                <Ticket size={18} />
+                <Ticket size={18} aria-hidden="true" />
                 {t.buy}
               </Link>
               <Link className="secondary-button invert" to="/moje-bilety">
-                <Download size={18} />
+                <Download size={18} aria-hidden="true" />
                 {t.download}
               </Link>
             </div>

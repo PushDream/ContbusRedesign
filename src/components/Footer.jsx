@@ -8,7 +8,13 @@ export default function Footer({ t }) {
       <div className="footer-credit">
         <span>Powered by</span>
         <a href="https://modularpath.dev" rel="noreferrer" target="_blank">
-          <img alt="Modularpath" className="footer-credit-logo" src="/modularpath-logo.png" />
+          <img
+            alt="Modularpath"
+            className="footer-credit-logo"
+            src="/modularpath-logo.png"
+            width={87}
+            height={42}
+          />
         </a>
       </div>
     </footer>

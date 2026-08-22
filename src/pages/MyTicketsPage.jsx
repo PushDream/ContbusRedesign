@@ -119,6 +119,7 @@ export default function MyTicketsPage() {
               onChange={(e) => setInput(e.target.value)}
               placeholder="np. CB-ABC123"
               required
+              spellCheck={false}
             />
           </label>
           <label>
@@ -129,16 +130,18 @@ export default function MyTicketsPage() {
               placeholder="jan.kowalski@email.com"
               required
               type="email"
+              autoComplete="email"
+              spellCheck={false}
             />
           </label>
           <button className="primary-button full" disabled={loading} type="submit">
             <Search size={18} />
-            {loading ? "Sprawdzanie..." : "Sprawdź"}
+            {loading ? "Sprawdzanie…" : "Sprawdź"}
           </button>
         </form>
 
         {searched && !loading && !ticket && (
-          <div className="secure-box manage-empty">
+          <div className="secure-box manage-empty" aria-live="polite">
             <TriangleAlert size={20} />
             <span>{t.manageNotFound}</span>
           </div>
@@ -147,7 +150,7 @@ export default function MyTicketsPage() {
         {ticket && (
           <article className="ticket-card">
             <div className="ticket-card-header">
-              <img src={logoUrl} alt="Contbus" className="ticket-card-logo" />
+              <img src={logoUrl} alt="Contbus" className="ticket-card-logo" width={157} height={28} />
               <span className={cancelled ? "status status-cancelled" : "status"}>
                 {cancelled ? t.manageStatusCancelled : t.manageStatusActive}
               </span>

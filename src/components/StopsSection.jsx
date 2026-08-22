@@ -14,7 +14,7 @@ export default function StopsSection({ t }) {
         </div>
       </div>
       <div className="stops-layout">
-        <div className="stop-map" aria-hidden="true">
+        <div className="stop-map">
           {stops.map((stop, index) => (
             <button
               className={[

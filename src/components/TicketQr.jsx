@@ -12,6 +12,8 @@ export default function TicketQr({ className = "", size = 140, value }) {
       marginSize={4}
       size={size}
       value={qrValue || "CB-"}
+      role="img"
+      aria-label="QR code for ticket"
     />
   );
 }

@@ -17,7 +17,7 @@ export default function ContactPage() {
         <div className="contact-cards">
           <div className="contact-info-card">
             <div className="contact-info-icon">
-              <Phone size={22} />
+              <Phone size={22} aria-hidden="true" />
             </div>
             <div>
               <strong>Infolinia</strong>
@@ -33,7 +33,7 @@ export default function ContactPage() {
 
           <div className="contact-info-card">
             <div className="contact-info-icon">
-              <Mail size={22} />
+              <Mail size={22} aria-hidden="true" />
             </div>
             <div>
               <strong>E-mail</strong>
@@ -45,7 +45,7 @@ export default function ContactPage() {
 
           <div className="contact-info-card">
             <div className="contact-info-icon">
-              <MapPin size={22} />
+              <MapPin size={22} aria-hidden="true" />
             </div>
             <div>
               <strong>Biuro</strong>

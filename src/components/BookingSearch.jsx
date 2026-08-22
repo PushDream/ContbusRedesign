@@ -152,11 +152,19 @@ export default function BookingSearch({ passengers, setPassengers }) {
       <label className="passengers-row">
         <span>{t.passengers}</span>
         <div className="stepper compact">
-          <button type="button" onClick={() => setPassengers((v) => Math.max(1, v - 1))}>
+          <button
+            aria-label="Decrease passengers"
+            type="button"
+            onClick={() => setPassengers((v) => Math.max(1, v - 1))}
+          >
             -
           </button>
           <strong>{passengers}</strong>
-          <button type="button" onClick={() => setPassengers((v) => Math.min(8, v + 1))}>
+          <button
+            aria-label="Increase passengers"
+            type="button"
+            onClick={() => setPassengers((v) => Math.min(8, v + 1))}
+          >
             +
           </button>
         </div>

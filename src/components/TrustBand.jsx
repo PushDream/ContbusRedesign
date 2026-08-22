@@ -10,7 +10,7 @@ export default function TrustBand({ t }) {
       </article>
       <article>
         <Users size={20} />
-        <strong>120 000+</strong>
+        <strong>120&nbsp;000+</strong>
         <span>{t.trustPassengers}</span>
       </article>
       <article>

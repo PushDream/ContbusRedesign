@@ -11,7 +11,12 @@ export default function ReviewsSection({ t }) {
       <div className="reviews">
         {testimonials.map((item) => (
           <article className="review-card" key={item.name}>
-            <div className="stars">★★★★★</div>
+            <div className="stars">
+              <span aria-hidden="true">★★★★★</span>
+              <span className="sr-only" aria-label="5 out of 5">
+                5 out of 5
+              </span>
+            </div>
             <p>{item.body}</p>
             <strong>{item.name}</strong>
           </article>
