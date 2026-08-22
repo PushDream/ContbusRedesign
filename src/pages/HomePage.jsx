@@ -16,7 +16,8 @@ export default function HomePage() {
     <>
       <section className="hero" id="home">
         <div className="hero-photo" aria-hidden="true" />
-        <div className="hero-overlay" />
+        <div className="hero-overlay" aria-hidden="true" />
+        <div className="hero-grain" aria-hidden="true" />
         <div className="hero-inner">
           <div className="hero-copy">
             <p className="eyebrow">{t.heroKicker}</p>

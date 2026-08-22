@@ -10,8 +10,8 @@ export default function FAQSection({ language, t }) {
     <section className="section faq-section" id="faq">
       <div className="section-heading narrow">
         <div>
-          <p className="eyebrow">{t.faqTitle}</p>
-          <h2>{t.faqLead}</h2>
+          <h2>{t.faqTitle}</h2>
+          <p>{t.faqLead}</p>
         </div>
       </div>
       <div className="faq-list">

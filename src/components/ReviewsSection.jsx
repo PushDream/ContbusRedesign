@@ -3,7 +3,11 @@ import { testimonials } from "../data/content.js";
 export default function ReviewsSection({ t }) {
   return (
     <section className="section reviews-home" aria-label={t.reviews}>
-      <p className="eyebrow">{t.reviews}</p>
+      <div className="section-heading">
+        <div>
+          <h2>{t.reviews}</h2>
+        </div>
+      </div>
       <div className="reviews">
         {testimonials.map((item) => (
           <article className="review-card" key={item.name}>
