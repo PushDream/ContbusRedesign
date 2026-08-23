@@ -184,8 +184,8 @@ export default function DriverAppPage() {
   const saveIncident = async () => {
     if (!selectedTrip || savingKey) return;
     const note = incident.trim();
-    if (!note) {
-      notify("Dodaj krotka notatke przed zapisaniem.", "info");
+    if (note.length < 3) {
+      notify("Notatka musi miec co najmniej 3 znaki.", "info");
       return;
     }
     setSavingKey(`incident-${selectedTrip.id}`);
@@ -477,6 +477,7 @@ export default function DriverAppPage() {
                       value={incident}
                       onChange={(event) => setIncident(event.target.value)}
                       placeholder="Np. korek, opoznienie, dodatkowy bagaz…"
+                      maxLength={2000}
                       rows={4}
                     />
                   </label>
