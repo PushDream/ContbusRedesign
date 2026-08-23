@@ -28,6 +28,7 @@ import {
 import SeatMap from "../components/SeatMap.jsx";
 import TicketQr from "../components/TicketQr.jsx";
 import { downloadTicketPdf } from "../lib/ticketPdf.js";
+import { warsawToday } from "../lib/warsawTime.js";
 
 const PAYMENT_METHODS = [
   { id: "blik", label: "BLIK", Icon: Smartphone },
@@ -51,14 +52,6 @@ function genBookingCode(seed) {
   return code;
 }
 
-function getTodayDate() {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
 function autoAssignSeats(fareId, chosen, needed) {
   if (chosen.length >= needed) return chosen.slice(0, needed);
   const seats = buildSeatMap(fareId, 0);
@@ -78,7 +71,7 @@ export default function BookingPage() {
 
   const from = searchParams.get("from") || "Lublin";
   const to = searchParams.get("to") || "Warszawa Marriott";
-  const date = searchParams.get("date") || getTodayDate();
+  const date = searchParams.get("date") || warsawToday();
   const departure = searchParams.get("departure") || "08:15";
   const passengers = Number(searchParams.get("passengers") || 1);
   const fareId = searchParams.get("fareId") || "lublin-warszawa";

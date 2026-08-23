@@ -4,21 +4,13 @@ import { ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUp, CalendarDays, Clock, Ma
 import { useApp } from "../context/AppContext.jsx";
 import { fares } from "../data/content.js";
 import { fetchDepartures } from "../lib/database.js";
+import { warsawToday as getTodayDate, warsawNowMinutes as getNowMinutes } from "../lib/warsawTime.js";
 
 const BOOKING_CUTOFF_MINUTES = 15;
-
-function getTodayDate() {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Warsaw" });
-}
 
 function timeToMinutes(timeText) {
   const [hours, minutes] = String(timeText || "").split(":").map(Number);
   return (hours || 0) * 60 + (minutes || 0);
-}
-
-function getNowMinutes() {
-  const warsawTime = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Warsaw" }));
-  return warsawTime.getHours() * 60 + warsawTime.getMinutes();
 }
 
 export default function ResultsPage() {

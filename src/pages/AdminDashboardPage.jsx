@@ -36,14 +36,7 @@ import { useApp } from "../context/AppContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
 import AdminNav from "../components/AdminNav.jsx";
 import AdminAuthGate from "../components/AdminAuthGate.jsx";
-
-function getTodayDate() {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+import { warsawToday } from "../lib/warsawTime.js";
 
 function timeText(value) {
   return String(value || "").slice(0, 5);
@@ -160,7 +153,7 @@ export default function AdminDashboardPage() {
   const bookingStatusLabels = text.bookingStatusLabels;
   const roleLabels = text.roleLabels;
   const notify = useToast();
-  const [date, setDate] = useState(getTodayDate());
+  const [date, setDate] = useState(warsawToday());
   const [overview, setOverview] = useState(null);
   const [operations, setOperations] = useState(null);
   const [loading, setLoading] = useState(true);

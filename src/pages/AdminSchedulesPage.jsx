@@ -17,6 +17,7 @@ import { useApp } from "../context/AppContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
 import AdminNav from "../components/AdminNav.jsx";
 import AdminAuthGate from "../components/AdminAuthGate.jsx";
+import { warsawToday } from "../lib/warsawTime.js";
 
 const DIRECTIONS = [
   { value: "lublin_warszawa", labelKey: "directionLublinWarszawa" },
@@ -43,8 +44,7 @@ function formatDays(days, text) {
 }
 
 function daysUntil(dateOnly) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = new Date(`${warsawToday()}T00:00:00`);
   const target = new Date(`${dateOnly}T00:00:00`);
   return Math.round((target.getTime() - today.getTime()) / 86400000);
 }
@@ -57,7 +57,7 @@ function dateOnly(date) {
 }
 
 function todayDateOnly() {
-  return dateOnly(new Date());
+  return warsawToday();
 }
 
 function addDays(value, days) {
