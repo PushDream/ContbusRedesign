@@ -53,7 +53,7 @@ export default function ResultsPage() {
       .catch((error) => {
         if (!active) return;
         setDepartures([]);
-        setErrorMessage(error.message || "Nie udało się pobrać kursów.");
+        setErrorMessage(error.message || t.tripsLoadFailed);
         setShowEarlier(false);
       })
       .finally(() => {
@@ -63,7 +63,7 @@ export default function ResultsPage() {
     return () => {
       active = false;
     };
-  }, [date, from, to]);
+  }, [date, from, to, t.tripsLoadFailed]);
 
   const isTravelToday = date === getTodayDate();
   const nowMinutes = isTravelToday ? getNowMinutes() : null;
@@ -115,7 +115,7 @@ export default function ResultsPage() {
   const [dateFormatted] = (() => {
     try {
       const d = new Date(date + "T00:00:00");
-      return [d.toLocaleDateString("pl-PL", { weekday: "long", year: "numeric", month: "long", day: "numeric" })];
+      return [d.toLocaleDateString(t.locale, { weekday: "long", year: "numeric", month: "long", day: "numeric" })];
     } catch {
       return [date];
     }
@@ -154,20 +154,20 @@ export default function ResultsPage() {
           type="button"
         >
           <Search size={16} />
-          Zmień wyszukiwanie
+          {t.changeSearch}
         </button>
       </div>
 
       {editingSearch && (
         <form className="results-search-panel" onSubmit={handleSearchUpdate}>
           <label>
-            <span>Skąd</span>
+            <span>{t.from}</span>
             <select value={draftFrom} onChange={(event) => setDraftFrom(event.target.value)}>
               {locations.map((place) => <option key={place}>{place}</option>)}
             </select>
           </label>
           <button
-            aria-label="Zamień miejsca"
+            aria-label={t.swapLabel}
             className="icon-button results-swap-button"
             onClick={() => { setDraftFrom(draftTo); setDraftTo(draftFrom); }}
             type="button"
@@ -175,25 +175,25 @@ export default function ResultsPage() {
             <ArrowLeftRight size={17} />
           </button>
           <label>
-            <span>Dokąd</span>
+            <span>{t.to}</span>
             <select value={draftTo} onChange={(event) => setDraftTo(event.target.value)}>
               {locations.map((place) => <option key={place}>{place}</option>)}
             </select>
           </label>
           <label>
-            <span>Data podróży</span>
+            <span>{t.date}</span>
             <div className="results-date-input">
               <CalendarDays size={16} aria-hidden="true" />
               <input min={getTodayDate()} type="date" value={draftDate} onChange={(event) => setDraftDate(event.target.value)} />
             </div>
           </label>
           <label>
-            <span>Pasażerowie</span>
+            <span>{t.passengers}</span>
             <input min="1" max="8" type="number" value={draftPassengers} onChange={(event) => setDraftPassengers(Math.min(8, Math.max(1, Number(event.target.value) || 1)))} />
           </label>
           <button className="primary-button results-search-submit" type="submit">
             <Search size={16} />
-            Pokaż kursy
+            {t.showTrips}
           </button>
         </form>
       )}
@@ -207,12 +207,12 @@ export default function ResultsPage() {
 
         {!loading && !errorMessage && upcomingDepartures.length === 0 && pastDepartures.length === 0 && (
           <div className="secure-box manage-empty">
-            <span>Brak kursów dla wybranej trasy i daty.</span>
+            <span>{t.noTripsForRoute}</span>
           </div>
         )}
 
         {loading && (
-          <div aria-label="Ładowanie kursów" className="results-skeleton-list" role="status">
+          <div aria-label={t.loadingTripsAria} className="results-skeleton-list" role="status">
             {[1, 2, 3, 4].map((item) => (
               <div className="result-card skeleton-card" key={item}>
                 <span className="skeleton-block wide" />
@@ -231,7 +231,7 @@ export default function ResultsPage() {
             type="button"
           >
             <ArrowUp size={14} />
-            {showEarlier ? "Ukryj wcześniejsze kursy" : "Pokaż wcześniejsze kursy"}
+            {showEarlier ? t.hideEarlierTrips : t.showEarlierTrips}
           </button>
         )}
 
@@ -259,7 +259,7 @@ export default function ResultsPage() {
               </div>
 
               <div className="result-card-action">
-                <span className="result-past-note">Kurs już odjechał</span>
+                <span className="result-past-note">{t.tripDeparted}</span>
               </div>
             </article>
           ))}
@@ -292,7 +292,7 @@ export default function ResultsPage() {
 
               <div className="result-card-meta">
                 <span className={seats <= 5 ? "seats-low" : "seats-ok"}>
-                  {seats} miejsc
+                  {seats} {t.seatsUnit}
                 </span>
                 <span className="result-note">{departure.note}</span>
               </div>
@@ -315,7 +315,7 @@ export default function ResultsPage() {
                   onClick={() => handleBook(departure)}
                   type="button"
                 >
-                  {isBoardingSoon ? "Odjazd wkrótce" : "Kup bilet"}
+                  {isBoardingSoon ? t.departingSoon : t.buy}
                   {!isBoardingSoon && <ArrowRight size={16} />}
                 </button>
               </div>

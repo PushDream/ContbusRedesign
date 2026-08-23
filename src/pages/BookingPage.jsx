@@ -30,17 +30,6 @@ import TicketQr from "../components/TicketQr.jsx";
 import { downloadTicketPdf } from "../lib/ticketPdf.js";
 import { warsawToday } from "../lib/warsawTime.js";
 
-const PAYMENT_METHODS = [
-  { id: "blik", label: "BLIK", Icon: Smartphone },
-  { id: "card", label: "Karta", Icon: Ticket },
-  { id: "transfer", label: "Przelew", Icon: Mail },
-];
-
-const EXTRAS = [
-  { id: "luggage", label: "Dodatkowa walizka", price: 12, Icon: Briefcase },
-  { id: "insurance", label: "Ubezpieczenie podróży", price: 8, Icon: ShieldCheck },
-];
-
 function genBookingCode(seed) {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let rng = Math.abs(seed) || 1;
@@ -68,6 +57,17 @@ export default function BookingPage() {
   const { profile, session } = useAuth();
   const notify = useToast();
   const [searchParams] = useSearchParams();
+
+  const PAYMENT_METHODS = [
+    { id: "blik", label: "BLIK", Icon: Smartphone },
+    { id: "card", label: t.paymentCard, Icon: Ticket },
+    { id: "transfer", label: t.paymentTransfer, Icon: Mail },
+  ];
+
+  const EXTRAS = [
+    { id: "luggage", label: t.extraLuggage, price: 12, Icon: Briefcase },
+    { id: "insurance", label: t.extraInsurance, price: 8, Icon: ShieldCheck },
+  ];
 
   const from = searchParams.get("from") || "Lublin";
   const to = searchParams.get("to") || "Warszawa Marriott";
@@ -145,10 +145,10 @@ export default function BookingPage() {
 
   const validateStep1 = () => {
     const e = {};
-    if (!buyer.firstName.trim()) e.firstName = "Wpisz imię";
-    if (!buyer.lastName.trim()) e.lastName = "Wpisz nazwisko";
-    if (!/\S+@\S+\.\S+/.test(buyer.email)) e.email = "Podaj poprawny e-mail";
-    if (!buyer.phone.trim()) e.phone = "Podaj numer telefonu";
+    if (!buyer.firstName.trim()) e.firstName = t.errorFirstNameRequired;
+    if (!buyer.lastName.trim()) e.lastName = t.errorLastNameRequired;
+    if (!/\S+@\S+\.\S+/.test(buyer.email)) e.email = t.errorInvalidEmail;
+    if (!buyer.phone.trim()) e.phone = t.errorPhoneRequired;
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -188,7 +188,7 @@ export default function BookingPage() {
       setStep(4);
       notify(t.toastBookingReady, "success");
     } catch (error) {
-      notify(error.message || "Nie udało się zapisać rezerwacji.", "error");
+      notify(error.message || t.bookingSaveFailed, "error");
     } finally {
       setSubmitting(false);
     }
@@ -203,7 +203,7 @@ export default function BookingPage() {
         bookingCode: displayBookingCode,
         from,
         to,
-        date: new Date(date + "T00:00:00").toLocaleDateString("pl-PL"),
+        date: new Date(date + "T00:00:00").toLocaleDateString(t.locale),
         time: departure,
         arrival,
         passengerName: `${buyer.firstName} ${buyer.lastName}`,
@@ -231,9 +231,9 @@ export default function BookingPage() {
   };
 
   const STEPS = [
-    { n: 1, label: "Pasażer" },
-    { n: 2, label: "Miejsca & Dodatki" },
-    { n: 3, label: "Płatność" },
+    { n: 1, label: t.stepLabelPassenger },
+    { n: 2, label: t.seatsAndExtras },
+    { n: 3, label: t.stepLabelPayment },
   ];
 
   return (
@@ -241,7 +241,7 @@ export default function BookingPage() {
       <div className="booking-header">
         <Link to="/results" className="back-link">
           <ArrowLeft size={16} />
-          Wyniki
+          {t.backToResults}
         </Link>
         <div className="booking-route-summary">
           <span>
@@ -276,10 +276,10 @@ export default function BookingPage() {
           {/* Step 1 — Passenger details */}
           {step === 1 && (
             <div className="booking-step-content">
-              <h2>Dane pasażera</h2>
+              <h2>{t.passengerDetailsHeading}</h2>
               <div className="booking-form-grid">
                 <label className={errors.firstName ? "has-error" : ""}>
-                  <span>Imię</span>
+                  <span>{t.firstName}</span>
                   <input
                     autoComplete="given-name"
                     value={buyer.firstName}
@@ -289,7 +289,7 @@ export default function BookingPage() {
                   {errors.firstName && <em className="field-error">{errors.firstName}</em>}
                 </label>
                 <label className={errors.lastName ? "has-error" : ""}>
-                  <span>Nazwisko</span>
+                  <span>{t.lastName}</span>
                   <input
                     autoComplete="family-name"
                     value={buyer.lastName}
@@ -323,7 +323,7 @@ export default function BookingPage() {
               </div>
               <div className="booking-step-nav">
                 <button className="primary-button" type="button" onClick={handleStep1Next}>
-                  Dalej — Miejsca i dodatki
+                  {t.nextSeatsExtras}
                   <ArrowRight size={18} />
                 </button>
               </div>
@@ -333,7 +333,7 @@ export default function BookingPage() {
           {/* Step 2 — Seats + extras */}
           {step === 2 && (
             <div className="booking-step-content">
-              <h2>Miejsca i dodatki</h2>
+              <h2>{t.seatsAndExtras}</h2>
 
               <div className="accordion">
                 <button
@@ -386,10 +386,10 @@ export default function BookingPage() {
               <div className="booking-step-nav">
                 <button className="secondary-button" type="button" onClick={() => setStep(1)}>
                   <ArrowLeft size={16} />
-                  Wróć
+                  {t.back}
                 </button>
                 <button className="primary-button" type="button" onClick={() => setStep(3)}>
-                  Dalej — Płatność
+                  {t.nextPayment}
                   <ArrowRight size={18} />
                 </button>
               </div>
@@ -399,7 +399,7 @@ export default function BookingPage() {
           {/* Step 3 — Payment */}
           {step === 3 && (
             <div className="booking-step-content">
-              <h2>Metoda płatności</h2>
+              <h2>{t.paymentMethodHeading}</h2>
 
               <div className="payment-methods">
                 {PAYMENT_METHODS.map(({ id, label, Icon }) => (
@@ -418,7 +418,7 @@ export default function BookingPage() {
               <div className="booking-price-breakdown">
                 <div>
                   <span>
-                    Bilet {from} → {to}
+                    {t.ticketLabel} {from} → {to}
                   </span>
                   <strong>
                     {routePrice} zł × {passengers}
@@ -426,19 +426,19 @@ export default function BookingPage() {
                 </div>
                 {extras.luggage && (
                   <div>
-                    <span>Dodatkowa walizka</span>
+                    <span>{t.extraLuggage}</span>
                     <strong>+12 zł</strong>
                   </div>
                 )}
                 {extras.insurance && (
                   <div>
-                    <span>Ubezpieczenie</span>
+                    <span>{t.extraInsurance}</span>
                     <strong>+8 zł</strong>
                   </div>
                 )}
                 {fee > 0 && (
                   <div>
-                    <span>Opłata serwisowa</span>
+                    <span>{t.service}</span>
                     <strong>{fee} zł</strong>
                   </div>
                 )}
@@ -456,10 +456,10 @@ export default function BookingPage() {
               <div className="booking-step-nav">
                 <button className="secondary-button" type="button" onClick={() => setStep(2)}>
                   <ArrowLeft size={16} />
-                  Wróć
+                  {t.back}
                 </button>
                 <button className="primary-button" disabled={submitting} type="button" onClick={confirmPayment}>
-                  {submitting ? "Zapisywanie…" : `Kup bilet · ${total} zł`}
+                  {submitting ? t.saving : `${t.buy} · ${total} zł`}
                   <ArrowRight size={18} />
                 </button>
               </div>
@@ -474,8 +474,10 @@ export default function BookingPage() {
               </div>
               <h2>{t.ticketReadyTitle}</h2>
               <p>
-                Kod rezerwacji <strong>{displayBookingCode}</strong> wysłany na{" "}
-                <strong>{buyer.email}</strong>. Miejsca: {effectiveSeats.join(", ")}.
+                {t.ticketConfirmationText
+                  .replace("{code}", displayBookingCode)
+                  .replace("{email}", buyer.email)
+                  .replace("{seats}", effectiveSeats.join(", ") || "-")}
               </p>
 
               <div className="qr-real">
@@ -484,7 +486,7 @@ export default function BookingPage() {
 
               {platform && (
                 <div className="ticket-platform-row">
-                  <span>Peron odjazdu</span>
+                  <span>{t.platformDepartureLabel}</span>
                   <strong>{platform}</strong>
                 </div>
               )}
@@ -501,11 +503,11 @@ export default function BookingPage() {
                 </button>
                 <Link className="secondary-button" to="/moje-bilety">
                   <Ticket size={18} />
-                  Moje bilety
+                  {t.quickNavMyTickets}
                 </Link>
                 <Link className="primary-button" to="/">
                   <ArrowLeft size={18} />
-                  Strona główna
+                  {t.backToHome}
                 </Link>
               </div>
             </div>
@@ -541,13 +543,13 @@ export default function BookingPage() {
 
             <div className="fare-box">
               <div>
-                <span>Trasa</span>
+                <span>{t.fareRouteLabel}</span>
                 <strong>
                   {from} – {to}
                 </strong>
               </div>
               <div>
-                <span>Odjazd</span>
+                <span>{t.departureShort}</span>
                 <strong>
                   {departure} → {arrival}
                 </strong>
@@ -557,20 +559,20 @@ export default function BookingPage() {
                 <strong>{date}</strong>
               </div>
               <div>
-                <span>Bilet</span>
+                <span>{t.ticketLabel}</span>
                 <strong>
                   {routePrice} zł × {passengers}
                 </strong>
               </div>
               {extrasTotal > 0 && (
                 <div>
-                  <span>Dodatki</span>
+                  <span>{t.addonsShort}</span>
                   <strong>+{extrasTotal} zł</strong>
                 </div>
               )}
               {fee > 0 && (
                 <div>
-                  <span>Opłata serwisowa</span>
+                  <span>{t.service}</span>
                   <strong>{fee} zł</strong>
                 </div>
               )}
@@ -585,7 +587,7 @@ export default function BookingPage() {
               <span>
                 {buyer.firstName
                   ? `${buyer.firstName} ${buyer.lastName}`.trim()
-                  : "Uzupełnij dane pasażera"}
+                  : t.completePassengerDetails}
               </span>
             </div>
           </aside>

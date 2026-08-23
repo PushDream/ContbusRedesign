@@ -10,7 +10,7 @@ export default function ContactPage() {
       <div className="page-heading">
         <p className="eyebrow">Contbus</p>
         <h1>{t.nav[5]}</h1>
-        <p className="page-lead">Jesteśmy do dyspozycji od poniedziałku do niedzieli.</p>
+        <p className="page-lead">{t.contactLead}</p>
       </div>
 
       <div className="contact-page-layout">
@@ -20,7 +20,7 @@ export default function ContactPage() {
               <Phone size={22} aria-hidden="true" />
             </div>
             <div>
-              <strong>Infolinia</strong>
+              <strong>{t.hotline}</strong>
               <a href="tel:+48607669080" className="contact-big-value">
                 +48 607 66 90 80
               </a>
@@ -36,7 +36,7 @@ export default function ContactPage() {
               <Mail size={22} aria-hidden="true" />
             </div>
             <div>
-              <strong>E-mail</strong>
+              <strong>{t.emailLabelShort}</strong>
               <a href="mailto:administrator@contbus.pl" className="contact-big-value">
                 administrator@contbus.pl
               </a>
@@ -48,7 +48,7 @@ export default function ContactPage() {
               <MapPin size={22} aria-hidden="true" />
             </div>
             <div>
-              <strong>Biuro</strong>
+              <strong>{t.officeLabel}</strong>
               <p className="contact-big-value" style={{ margin: 0 }}>
                 Contbus Olszak Sp. J.
               </p>
@@ -60,11 +60,11 @@ export default function ContactPage() {
         <div className="contact-actions-panel">
           <a className="primary-button" href="tel:+48607669080">
             <Phone size={18} />
-            Zadzwoń teraz
+            {t.callButton}
           </a>
           <a className="secondary-button" href="mailto:administrator@contbus.pl">
             <Mail size={18} />
-            Wyślij e-mail
+            {t.sendEmailButton}
           </a>
           <Link className="secondary-button" to="/results">
             <Ticket size={18} />

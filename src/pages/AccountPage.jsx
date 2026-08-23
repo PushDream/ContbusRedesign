@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarDays, LogOut, Mail, Phone, RefreshCw, Ticket, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useApp } from "../context/AppContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { fetchCustomerBookings } from "../lib/database.js";
 import { useToast } from "../lib/ToastProvider.jsx";
@@ -12,20 +13,13 @@ const initialCredentials = {
   phone: "",
 };
 
-const statusLabels = {
-  paid: "Opłacona",
-  pending: "Oczekuje",
-  cancelled: "Anulowana",
-  refunded: "Zwrócona",
-};
-
-function money(value, currency = "PLN") {
-  return `${Number(value || 0).toLocaleString("pl-PL")} ${currency === "PLN" ? "zł" : currency}`;
+function money(value, currency = "PLN", locale = "pl-PL") {
+  return `${Number(value || 0).toLocaleString(locale)} ${currency === "PLN" ? "zł" : currency}`;
 }
 
-function prettyDate(value) {
+function prettyDate(value, locale = "pl-PL") {
   if (!value) return "-";
-  return new Date(`${value}T00:00:00`).toLocaleDateString("pl-PL", {
+  return new Date(`${value}T00:00:00`).toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -56,6 +50,7 @@ function GoogleIcon() {
 }
 
 export default function AccountPage() {
+  const { t } = useApp();
   const notify = useToast();
   const { configured, loadingAuth, profile, session, signIn, signInWithGoogle, signOut, signUp } = useAuth();
   const [mode, setMode] = useState("signin");
@@ -69,8 +64,8 @@ export default function AccountPage() {
   const [loadingBookings, setLoadingBookings] = useState(false);
 
   const displayName = useMemo(
-    () => profile?.full_name || session?.user?.user_metadata?.full_name || session?.user?.email || "Klient",
-    [profile, session],
+    () => profile?.full_name || session?.user?.user_metadata?.full_name || session?.user?.email || t.customerFallback,
+    [profile, session, t.customerFallback],
   );
 
   const updateField = (field, value) => {
@@ -85,11 +80,11 @@ export default function AccountPage() {
       setBookings(await fetchCustomerBookings());
     } catch (error) {
       setBookings([]);
-      setBookingsError(error.message || "Nie udało się pobrać rezerwacji.");
+      setBookingsError(error.message || t.bookingsLoadFailed);
     } finally {
       setLoadingBookings(false);
     }
-  }, [session]);
+  }, [session, t.bookingsLoadFailed]);
 
   useEffect(() => {
     let active = true;
@@ -112,7 +107,7 @@ export default function AccountPage() {
       .catch((error) => {
         if (!active) return;
         setBookings([]);
-        setBookingsError(error.message || "Nie udało się pobrać rezerwacji.");
+        setBookingsError(error.message || t.bookingsLoadFailed);
       })
       .finally(() => {
         if (active) setLoadingBookings(false);
@@ -121,12 +116,12 @@ export default function AccountPage() {
     return () => {
       active = false;
     };
-  }, [session]);
+  }, [session, t.bookingsLoadFailed]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!configured) {
-      setAuthError("Supabase is not configured for this deployment.");
+      setAuthError(t.accountUnavailableBody);
       return;
     }
 
@@ -145,11 +140,11 @@ export default function AccountPage() {
       mode === "signup" ? await signUp(payload) : await signIn({ email: payload.email, password: payload.password });
 
     if (error) {
-      setAuthError(error.message || "Nie udało się zalogować.");
+      setAuthError(error.message || t.signInFailed);
     } else if (mode === "signup" && !data?.session) {
-      setAuthMessage("Konto utworzone. Sprawdź e-mail, aby potwierdzić logowanie.");
+      setAuthMessage(t.accountCreatedCheckEmail);
     } else {
-      notify(mode === "signup" ? "Konto klienta utworzone" : "Zalogowano", "success");
+      notify(mode === "signup" ? t.customerAccountCreatedToast : t.signedInToast, "success");
       setCredentials(initialCredentials);
     }
 
@@ -158,7 +153,7 @@ export default function AccountPage() {
 
   const handleSignOut = async () => {
     await signOut();
-    notify("Wylogowano", "info");
+    notify(t.signedOutToast, "info");
   };
 
   const handleGoogleSignIn = async () => {
@@ -166,7 +161,7 @@ export default function AccountPage() {
     setAuthError("");
     const { error } = await signInWithGoogle();
     if (error) {
-      setAuthError(error.message || "Nie udało się zalogować przez Google.");
+      setAuthError(error.message || t.googleSignInFailed);
       setSocialSubmitting(false);
     }
   };
@@ -176,11 +171,8 @@ export default function AccountPage() {
       <div className="account-page">
         <section className="account-auth-card">
           <UserRound size={24} />
-          <h1>Konto klienta</h1>
-          <p>
-            Logowanie wymaga ustawienia zmiennych Supabase w tej instalacji. Strona nadal działa w trybie
-            demonstracyjnym bez kont.
-          </p>
+          <h1>{t.accountUnavailableTitle}</h1>
+          <p>{t.accountUnavailableBody}</p>
         </section>
       </div>
     );
@@ -191,8 +183,8 @@ export default function AccountPage() {
       <div className="account-page">
         <section className="account-auth-card">
           <span className="spinner large" aria-hidden="true" />
-          <h1>Sprawdzanie sesji</h1>
-          <p>Ładowanie konta klienta.</p>
+          <h1>{t.checkingSession}</h1>
+          <p>{t.loadingCustomerAccount}</p>
         </section>
       </div>
     );
@@ -203,9 +195,9 @@ export default function AccountPage() {
       <div className="account-page account-auth-layout">
         <section className="account-auth-card">
           <UserRound size={24} />
-          <p className="eyebrow">Contbus konto</p>
-          <h1>{mode === "signup" ? "Utwórz konto klienta" : "Zaloguj się"}</h1>
-          <p>Po zalogowaniu bilety kupione na tym koncie będą widoczne w jednym miejscu.</p>
+          <p className="eyebrow">{t.accountEyebrow}</p>
+          <h1>{mode === "signup" ? t.createAccountTitle : t.signInTitle}</h1>
+          <p>{t.accountIntro}</p>
 
           <button
             className="account-google-button"
@@ -214,14 +206,14 @@ export default function AccountPage() {
             type="button"
           >
             <GoogleIcon />
-            {socialSubmitting ? "Łączenie z Google…" : "Kontynuuj przez Google"}
+            {socialSubmitting ? t.connectingGoogle : t.continueWithGoogle}
           </button>
 
           <div className="account-divider">
-            <span>albo</span>
+            <span>{t.orDivider}</span>
           </div>
 
-          <div className="account-tabs" role="tablist" aria-label="Tryb konta">
+          <div className="account-tabs" role="tablist" aria-label={t.accountModeAria}>
             <button
               className={mode === "signin" ? "active" : ""}
               onClick={() => {
@@ -231,7 +223,7 @@ export default function AccountPage() {
               }}
               type="button"
             >
-              Logowanie
+              {t.signInTab}
             </button>
             <button
               className={mode === "signup" ? "active" : ""}
@@ -242,7 +234,7 @@ export default function AccountPage() {
               }}
               type="button"
             >
-              Rejestracja
+              {t.signUpTab}
             </button>
           </div>
 
@@ -250,7 +242,7 @@ export default function AccountPage() {
             {mode === "signup" && (
               <>
                 <label>
-                  <span>Imię i nazwisko</span>
+                  <span>{t.fieldName}</span>
                   <input
                     autoComplete="name"
                     minLength={2}
@@ -261,7 +253,7 @@ export default function AccountPage() {
                   />
                 </label>
                 <label>
-                  <span>Telefon</span>
+                  <span>{t.fieldPhone}</span>
                   <input
                     autoComplete="tel"
                     onChange={(event) => updateField("phone", event.target.value)}
@@ -273,7 +265,7 @@ export default function AccountPage() {
               </>
             )}
             <label>
-              <span>Email</span>
+              <span>{t.emailFieldLabel}</span>
               <input
                 autoComplete="email"
                 onChange={(event) => updateField("email", event.target.value)}
@@ -284,7 +276,7 @@ export default function AccountPage() {
               />
             </label>
             <label>
-              <span>Hasło</span>
+              <span>{t.passwordFieldLabel}</span>
               <input
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
                 minLength={6}
@@ -297,7 +289,7 @@ export default function AccountPage() {
             {authError && <div className="account-error" aria-live="polite">{authError}</div>}
             {authMessage && <div className="account-success" aria-live="polite">{authMessage}</div>}
             <button className="primary-button" disabled={submitting} type="submit">
-              {submitting ? "Proszę czekać..." : mode === "signup" ? "Utwórz konto" : "Zaloguj się"}
+              {submitting ? t.pleaseWait : mode === "signup" ? t.createAccountButton : t.signInTitle}
             </button>
           </form>
         </section>
@@ -309,13 +301,13 @@ export default function AccountPage() {
     <div className="account-page">
       <section className="account-hero">
         <div>
-          <p className="eyebrow">Konto klienta</p>
+          <p className="eyebrow">{t.accountUnavailableTitle}</p>
           <h1>{displayName}</h1>
-          <p>Zarządzaj rezerwacjami kupionymi po zalogowaniu.</p>
+          <p>{t.manageBookingsIntro}</p>
         </div>
         <button className="secondary-button" onClick={handleSignOut} type="button">
           <LogOut size={18} />
-          Wyloguj
+          {t.signOutButton}
         </button>
       </section>
 
@@ -323,19 +315,19 @@ export default function AccountPage() {
         <section className="account-panel">
           <div className="account-panel-header">
             <div>
-              <p className="eyebrow">Dane</p>
-              <h2>Profil</h2>
+              <p className="eyebrow">{t.dataLabel}</p>
+              <h2>{t.profileHeading}</h2>
             </div>
           </div>
           <div className="account-profile-grid">
             <div>
               <Mail size={18} />
-              <span>Email</span>
+              <span>{t.emailFieldLabel}</span>
               <strong>{session.user.email}</strong>
             </div>
             <div>
               <Phone size={18} />
-              <span>Telefon</span>
+              <span>{t.fieldPhone}</span>
               <strong>{profile?.phone || session.user.user_metadata?.phone || "-"}</strong>
             </div>
           </div>
@@ -344,17 +336,17 @@ export default function AccountPage() {
         <section className="account-panel">
           <div className="account-panel-header">
             <div>
-              <p className="eyebrow">Bilety</p>
-              <h2>Moje rezerwacje</h2>
+              <p className="eyebrow">{t.navTickets}</p>
+              <h2>{t.myBookingsHeading}</h2>
             </div>
-            <button className="icon-button" onClick={loadBookings} type="button" aria-label="Odśwież rezerwacje">
+            <button className="icon-button" onClick={loadBookings} type="button" aria-label={t.refreshBookingsAria}>
               <RefreshCw size={18} />
             </button>
           </div>
 
           {bookingsError && <div className="account-error inline" aria-live="polite">{bookingsError}</div>}
           {loadingBookings && (
-            <div aria-label="Ładowanie rezerwacji" className="account-booking-list skeleton-list" role="status">
+            <div aria-label={t.loadingBookingsAria} className="account-booking-list skeleton-list" role="status">
               {[1, 2].map((item) => (
                 <div className="account-booking-row skeleton-card" key={item}>
                   <span className="skeleton-block wide" />
@@ -366,9 +358,9 @@ export default function AccountPage() {
           {!loadingBookings && !bookings.length && !bookingsError && (
             <div className="account-empty">
               <Ticket size={22} />
-              <strong>Nie masz jeszcze rezerwacji na tym koncie.</strong>
+              <strong>{t.noBookingsYet}</strong>
               <Link className="primary-button" to="/results">
-                Kup bilet
+                {t.buy}
               </Link>
             </div>
           )}
@@ -377,18 +369,20 @@ export default function AccountPage() {
               {bookings.map((booking) => (
                 <article className="account-booking-row" key={booking.id}>
                   <div className="account-booking-main">
-                    <span className={`account-status ${booking.status}`}>{statusLabels[booking.status] || booking.status}</span>
+                    <span className={`account-status ${booking.status}`}>
+                      {t.bookingStatusLabels[booking.status] || booking.status}
+                    </span>
                     <strong>{booking.route}</strong>
                     <small>
                       <CalendarDays size={14} />
-                      {prettyDate(booking.departureDate)} · {booking.departureTime} - {booking.arrivalTime}
+                      {prettyDate(booking.departureDate, t.locale)} · {booking.departureTime} - {booking.arrivalTime}
                     </small>
                   </div>
                   <div className="account-booking-meta">
                     <span>{booking.reference}</span>
-                    <strong>{money(booking.totalAmount, booking.currency)}</strong>
+                    <strong>{money(booking.totalAmount, booking.currency, t.locale)}</strong>
                     <small>
-                      {booking.passengerCount} os. · miejsca {booking.seatNumbers.join(", ") || "-"}
+                      {booking.passengerCount} {t.personsShort} · {t.seatsShort} {booking.seatNumbers.join(", ") || "-"}
                     </small>
                   </div>
                 </article>

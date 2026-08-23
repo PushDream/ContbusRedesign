@@ -129,7 +129,7 @@ export default function ManageBooking({ t }) {
           </label>
           <button className="primary-button full" disabled={loading} type="submit">
             <Search size={18} />
-            {loading ? "Sprawdzanie…" : t.manageFind}
+            {loading ? t.searching : t.manageFind}
           </button>
         </form>
 

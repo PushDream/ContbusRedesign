@@ -136,7 +136,7 @@ export default function MyTicketsPage() {
           </label>
           <button className="primary-button full" disabled={loading} type="submit">
             <Search size={18} />
-            {loading ? "Sprawdzanie…" : "Sprawdź"}
+            {loading ? t.searching : t.manageFind}
           </button>
         </form>
 
@@ -163,7 +163,9 @@ export default function MyTicketsPage() {
               </div>
               <div className="ticket-card-arrow">
                 <ArrowRight size={20} />
-                <small>{ticket.passengerCount} os.</small>
+                <small>
+                  {ticket.passengerCount} {t.personsShort}
+                </small>
               </div>
               <div className="ticket-card-stop">
                 <strong>{ticket.arrivalTime}</strong>
@@ -177,20 +179,20 @@ export default function MyTicketsPage() {
                 <strong>{ticket.departureDate}</strong>
               </div>
               <div>
-                <span>Miejsce</span>
+                <span>{t.seatLabel}</span>
                 <strong>{ticket.seatNumbers.join(", ") || "-"}</strong>
               </div>
               <div>
-                <span>Pasażer</span>
+                <span>{t.stepLabelPassenger}</span>
                 <strong>{ticket.buyerName}</strong>
               </div>
               <div>
-                <span>Kod</span>
+                <span>{t.manageCode}</span>
                 <strong>{ticket.reference}</strong>
               </div>
               {ticket.platform && (
                 <div>
-                  <span>Peron</span>
+                  <span>{t.platformShort}</span>
                   <strong>{ticket.platform}</strong>
                 </div>
               )}
