@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Download, Mail, Search, TicketX, TriangleAlert } from "lucide-react";
-import { fares, logoUrl } from "../data/content.js";
+import { findFareForPair, logoUrl } from "../data/content.js";
 import { useToast } from "../lib/ToastProvider.jsx";
 import { cancelPublicBooking, lookupPublicBooking } from "../lib/database.js";
 import { downloadTicketPdf } from "../lib/ticketPdf.js";
@@ -94,7 +94,7 @@ export default function ManageBooking({ t }) {
   };
 
   const route = booking ? routeParts(booking.route) : { from: "-", to: "-" };
-  const trackedFare = fares.find((fare) => fare.from === route.from && fare.to === route.to);
+  const trackedFare = findFareForPair(route.from, route.to);
 
   return (
     <section className="section manage-section" id="manage">

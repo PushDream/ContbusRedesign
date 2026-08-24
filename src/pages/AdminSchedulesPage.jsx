@@ -19,12 +19,28 @@ import AdminNav from "../components/AdminNav.jsx";
 import AdminAuthGate from "../components/AdminAuthGate.jsx";
 import { warsawToday } from "../lib/warsawTime.js";
 
+// Mirrors public.contbus_live_route_code() in the database - a direction here
+// with no route code there generates no trips, so the two lists move together.
 const DIRECTIONS = [
   { value: "lublin_warszawa", labelKey: "directionLublinWarszawa" },
   { value: "warszawa_lublin", labelKey: "directionWarszawaLublin" },
+  { value: "lublin_chopin", labelKey: "directionLublinChopin" },
+  { value: "chopin_lublin", labelKey: "directionChopinLublin" },
+  { value: "lublin_modlin", labelKey: "directionLublinModlin" },
+  { value: "modlin_lublin", labelKey: "directionModlinLublin" },
+  { value: "warszawa_chopin", labelKey: "directionWarszawaChopin" },
+  { value: "chopin_warszawa", labelKey: "directionChopinWarszawa" },
+  { value: "warszawa_modlin", labelKey: "directionWarszawaModlin" },
+  { value: "modlin_warszawa", labelKey: "directionModlinWarszawa" },
+  { value: "chopin_modlin", labelKey: "directionChopinModlin" },
+  { value: "modlin_chopin", labelKey: "directionModlinChopin" },
 ];
 
 const ALL_DAYS = [1, 2, 3, 4, 5, 6, 7];
+
+function firstDeparturePages() {
+  return Object.fromEntries(DIRECTIONS.map((direction) => [direction.value, 1]));
+}
 
 function emptyDepartureForm(direction) {
   return { time: "", direction, days: [...ALL_DAYS], tripType: "regular", notes: "" };
@@ -127,7 +143,8 @@ export default function AdminSchedulesPage() {
   const [generating, setGenerating] = useState(false);
   const [departureQuery, setDepartureQuery] = useState("");
   const [departureStatus, setDepartureStatus] = useState("all");
-  const [departurePages, setDeparturePages] = useState({ lublin_warszawa: 1, warszawa_lublin: 1 });
+  const [departurePages, setDeparturePages] = useState(firstDeparturePages);
+  const [departureDirection, setDepartureDirection] = useState("all");
 
   const [tripFilterStart, setTripFilterStart] = useState(() => todayDateOnly());
   const [tripFilterEnd, setTripFilterEnd] = useState(() => addDays(todayDateOnly(), 30));
@@ -236,7 +253,7 @@ export default function AdminSchedulesPage() {
   const primaryRouteId = routes[0]?.id || "";
 
   const departuresByDirection = useMemo(() => {
-    const grouped = { lublin_warszawa: [], warszawa_lublin: [] };
+    const grouped = Object.fromEntries(DIRECTIONS.map((direction) => [direction.value, []]));
     departures
       .slice()
       .sort((left, right) => timeText(left.departure_time).localeCompare(timeText(right.departure_time)))
@@ -257,6 +274,23 @@ export default function AdminSchedulesPage() {
       }),
     ]));
   }, [departureQuery, departureStatus, departuresByDirection, text]);
+
+  const shownDirections = useMemo(
+    () =>
+      departureDirection === "all"
+        ? DIRECTIONS
+        : DIRECTIONS.filter((direction) => direction.value === departureDirection),
+    [departureDirection],
+  );
+
+  const shownDepartureCount = useMemo(
+    () =>
+      shownDirections.reduce(
+        (total, direction) => total + (visibleDeparturesByDirection[direction.value]?.length || 0),
+        0,
+      ),
+    [shownDirections, visibleDeparturesByDirection],
+  );
 
   const fareByPair = useMemo(() => {
     const map = {};
@@ -568,20 +602,31 @@ export default function AdminSchedulesPage() {
             <div className="admin-list-toolbar">
               <label className="admin-search-field">
                 <span className="sr-only">Filtruj odjazdy</span>
-                <input onChange={(event) => { setDepartureQuery(event.target.value); setDeparturePages({ lublin_warszawa: 1, warszawa_lublin: 1 }); }} placeholder="Szukaj godziny, dnia lub typu..." type="search" value={departureQuery} />
+                <input onChange={(event) => { setDepartureQuery(event.target.value); setDeparturePages(firstDeparturePages()); }} placeholder="Szukaj godziny, dnia lub typu..." type="search" value={departureQuery} />
+              </label>
+              <label>
+                <span className="sr-only">{text.direction}</span>
+                <select onChange={(event) => { setDepartureDirection(event.target.value); setDeparturePages(firstDeparturePages()); }} value={departureDirection}>
+                  <option value="all">{text.allDirections}</option>
+                  {DIRECTIONS.map((direction) => (
+                    <option key={direction.value} value={direction.value}>
+                      {text[direction.labelKey]}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 <span className="sr-only">Status odjazdu</span>
-                <select onChange={(event) => { setDepartureStatus(event.target.value); setDeparturePages({ lublin_warszawa: 1, warszawa_lublin: 1 }); }} value={departureStatus}>
+                <select onChange={(event) => { setDepartureStatus(event.target.value); setDeparturePages(firstDeparturePages()); }} value={departureStatus}>
                   <option value="all">Wszystkie statusy</option>
                   <option value="active">Tylko aktywne</option>
                   <option value="inactive">Tylko nieaktywne</option>
                 </select>
               </label>
-              <span className="admin-results-count">{Object.values(visibleDeparturesByDirection).flat().length} odjazdów</span>
+              <span className="admin-results-count">{shownDepartureCount} odjazdów</span>
             </div>
 
-            {DIRECTIONS.map((direction) => {
+            {shownDirections.map((direction) => {
               const directionDepartures = visibleDeparturesByDirection[direction.value];
               const page = Math.min(departurePages[direction.value], Math.max(1, Math.ceil(directionDepartures.length / pageSize)));
               const pageItems = directionDepartures.slice((page - 1) * pageSize, page * pageSize);

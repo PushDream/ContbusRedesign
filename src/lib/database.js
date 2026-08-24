@@ -1,4 +1,12 @@
-import { departureTimes, estimateArrival, fares, getPlatform, hashString, seededRandom } from "../data/content.js";
+import {
+  departureTimes,
+  estimateArrival,
+  fares,
+  findFareForPair,
+  getPlatform,
+  hashString,
+  seededRandom,
+} from "../data/content.js";
 import { isSupabaseConfigured, supabase } from "./supabase.js";
 
 const stationCodeByName = {
@@ -29,7 +37,7 @@ function durationLabel(minutes) {
 }
 
 function appFareIdForRoute(origin, destination) {
-  return fares.find((fare) => fare.from === origin && fare.to === destination)?.id;
+  return findFareForPair(origin, destination)?.id;
 }
 
 function stationDisplayName(station) {
@@ -65,9 +73,7 @@ function fallbackSeatsLeft(fareId, time) {
 }
 
 function fallbackDepartures({ from, to }) {
-  const fare = fares.find(
-    (item) => item.from.toLowerCase() === from.toLowerCase() && item.to.toLowerCase() === to.toLowerCase(),
-  );
+  const fare = findFareForPair(from, to);
 
   if (!fare) return [];
 
