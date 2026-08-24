@@ -13,6 +13,7 @@ import {
   Gauge,
   LogOut,
   MapPin,
+  Phone,
   RefreshCw,
   Route,
   Search,
@@ -31,6 +32,7 @@ import {
   updateAdminTrip,
 } from "../lib/database.js";
 import { useAdminAccess } from "../lib/useAdminAccess.js";
+import { useAdminRealtime } from "../lib/useAdminRealtime.js";
 import { adminCopy } from "../lib/adminCopy.js";
 import { useApp } from "../context/AppContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
@@ -183,6 +185,9 @@ export default function AdminDashboardPage() {
   const [tripListQuery, setTripListQuery] = useState("");
   const [tripListStatus, setTripListStatus] = useState("all");
   const [tripListPage, setTripListPage] = useState(1);
+  const [tripListSort, setTripListSort] = useState("time");
+  const [selectedTripIds, setSelectedTripIds] = useState([]);
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   const loadDashboard = useCallback(async () => {
     if (!staff) return;
@@ -261,12 +266,27 @@ export default function AdminDashboardPage() {
   const selectedTrip = operationalTrips.find((trip) => trip.id === selectedTripId) || operationalTrips[0] || null;
   const filteredOperationalTrips = useMemo(() => {
     const query = tripListQuery.trim().toLowerCase();
-    return operationalTrips.filter((trip) => {
+    const matched = operationalTrips.filter((trip) => {
       const matchesStatus = tripListStatus === "all" || trip.status === tripListStatus;
       const matchesQuery = !query || [trip.departure_time, trip.arrival_time, trip.origin_name, trip.destination_name, trip.route_code, trip.platform, trip.vehicle?.label, trip.driver?.full_name].filter(Boolean).some((value) => String(value).toLowerCase().includes(query));
       return matchesStatus && matchesQuery;
     });
-  }, [operationalTrips, tripListQuery, tripListStatus]);
+
+    const byTime = (left, right) => timeText(left.departure_time).localeCompare(timeText(right.departure_time));
+    const comparators = {
+      time: byTime,
+      // Fullest trips first: that is the order a dispatcher triages in.
+      occupancy: (left, right) =>
+        occupancy(right.passenger_count, right.capacity) - occupancy(left.passenger_count, left.capacity) ||
+        byTime(left, right),
+      route: (left, right) =>
+        String(left.route_label || "").localeCompare(String(right.route_label || "")) || byTime(left, right),
+      status: (left, right) =>
+        String(left.status || "").localeCompare(String(right.status || "")) || byTime(left, right),
+    };
+
+    return matched.slice().sort(comparators[tripListSort] || byTime);
+  }, [operationalTrips, tripListQuery, tripListSort, tripListStatus]);
   const tripListPageSize = 10;
   const tripListPageCount = Math.max(1, Math.ceil(filteredOperationalTrips.length / tripListPageSize));
   const visibleOperationalTrips = filteredOperationalTrips.slice((tripListPage - 1) * tripListPageSize, tripListPage * tripListPageSize);
@@ -311,6 +331,18 @@ export default function AdminDashboardPage() {
     setOperations(nextOperations);
   }, [date]);
 
+  // Refresh silently on database pushes: no spinner, so a dispatcher reading the
+  // manifest is not interrupted by a flash of skeletons every time a passenger
+  // checks in. A failed refresh leaves the previous data on screen.
+  const handleRealtimeChange = useCallback(() => {
+    reloadOperations().catch(() => {});
+  }, [reloadOperations]);
+
+  const { status: realtimeStatus, lastEventAt } = useAdminRealtime({
+    enabled: staff,
+    onChange: handleRealtimeChange,
+  });
+
   const saveTripField = async (tripId, values, successMessage) => {
     const key = `trip-${tripId}`;
     setSavingKey(key);
@@ -323,6 +355,36 @@ export default function AdminDashboardPage() {
     } finally {
       setSavingKey("");
     }
+  };
+
+  const toggleTripSelection = (tripId) => {
+    setSelectedTripIds((current) =>
+      current.includes(tripId) ? current.filter((id) => id !== tripId) : [...current, tripId],
+    );
+  };
+
+  // Assign one vehicle or driver across every selected trip. Each trip is a
+  // separate RPC, so a partial failure is reported with a count rather than
+  // silently leaving some trips unassigned.
+  const applyBulkAssignment = async (values) => {
+    if (!selectedTripIds.length || bulkSaving) return;
+    setBulkSaving(true);
+    const results = await Promise.allSettled(
+      selectedTripIds.map((tripId) => updateAdminTrip(tripId, values)),
+    );
+    const failed = results.filter((result) => result.status === "rejected").length;
+    const applied = results.length - failed;
+
+    try {
+      await reloadOperations();
+    } catch {
+      // The write already landed; a failed refetch should not read as a failure.
+    }
+
+    if (applied) notify(text.bulkApplied.replace("{count}", applied), "success");
+    if (failed) notify(text.bulkFailed.replace("{count}", failed), "error");
+    if (!failed) setSelectedTripIds([]);
+    setBulkSaving(false);
   };
 
   const saveBookingStatus = async (bookingId, status) => {
@@ -564,6 +626,14 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="admin-toolbar">
+          <span
+            className={realtimeStatus === "live" ? "admin-live-chip on" : "admin-live-chip off"}
+            title={realtimeStatus === "live" ? undefined : text.liveOffHint}
+          >
+            <span aria-hidden="true" className="admin-live-dot" />
+            {realtimeStatus === "live" ? text.liveOn : text.liveOff}
+            {lastEventAt ? ` · ${text.lastUpdate} ${formatDateTime(lastEventAt, text)}` : ""}
+          </span>
           <span className="admin-user-chip">{profile.full_name || session.user.email}</span>
           <label>
             <CalendarDays size={17} />
@@ -1023,17 +1093,80 @@ export default function AdminDashboardPage() {
           <div className="admin-trip-list">
             <div className="admin-list-toolbar admin-dashboard-trip-toolbar">
               <label className="admin-search-field">
-                <span className="sr-only">Filtruj kursy operacyjne</span>
-                <input onChange={(event) => { setTripListQuery(event.target.value); setTripListPage(1); }} placeholder="Szukaj godziny, trasy lub przypisania..." type="search" value={tripListQuery} />
+                <span className="sr-only">{text.filterTripsLabel}</span>
+                <input onChange={(event) => { setTripListQuery(event.target.value); setTripListPage(1); }} placeholder={text.tripSearchPlaceholder} type="search" value={tripListQuery} />
               </label>
               <label>
-                <span className="sr-only">Status kursu</span>
+                <span className="sr-only">{text.tripStatusLabel}</span>
                 <select onChange={(event) => { setTripListStatus(event.target.value); setTripListPage(1); }} value={tripListStatus}>
-                  <option value="all">Wszystkie statusy</option>
+                  <option value="all">{text.allStatuses}</option>
                   {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
               </label>
+              <label>
+                <span className="sr-only">{text.sortBy}</span>
+                <select onChange={(event) => { setTripListSort(event.target.value); setTripListPage(1); }} value={tripListSort}>
+                  <option value="time">{text.sortBy}: {text.sortTime}</option>
+                  <option value="occupancy">{text.sortBy}: {text.sortOccupancy}</option>
+                  <option value="route">{text.sortBy}: {text.sortRoute}</option>
+                  <option value="status">{text.sortBy}: {text.sortStatus}</option>
+                </select>
+              </label>
+              <button
+                className="admin-link-button"
+                disabled={!visibleOperationalTrips.length}
+                onClick={() => setSelectedTripIds(visibleOperationalTrips.map((trip) => trip.id))}
+                type="button"
+              >
+                {text.selectAllVisible}
+              </button>
             </div>
+
+            {selectedTripIds.length > 0 && (
+              <div className="admin-bulk-bar" role="group" aria-label={text.bulkAssign}>
+                <strong>
+                  {selectedTripIds.length} {text.selectedCount}
+                </strong>
+                <label>
+                  <span className="sr-only">{text.bulkVehicle}</span>
+                  <select
+                    disabled={bulkSaving}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      if (value) applyBulkAssignment({ vehicle_id: value });
+                      event.target.value = "";
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="">{text.bulkVehicle}</option>
+                    {vehicles.map((vehicle) => (
+                      <option key={vehicle.id} value={vehicle.id}>{vehicle.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="sr-only">{text.bulkDriver}</span>
+                  <select
+                    disabled={bulkSaving}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      if (value) applyBulkAssignment({ driver_id: value });
+                      event.target.value = "";
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="">{text.bulkDriver}</option>
+                    {drivers.map((driver) => (
+                      <option key={driver.id} value={driver.id}>{driver.full_name || text.unnamed}</option>
+                    ))}
+                  </select>
+                </label>
+                {bulkSaving && <span className="admin-bulk-status">{text.bulkWorking}</span>}
+                <button className="admin-link-button" onClick={() => setSelectedTripIds([])} type="button">
+                  {text.clearSelection}
+                </button>
+              </div>
+            )}
             {loading && (
               <div aria-label={text.loadingTrips} className="admin-table-skeleton" role="status">
                 {[1, 2, 3, 4].map((item) => <span className="skeleton-block row" key={item} />)}
@@ -1049,6 +1182,20 @@ export default function AdminDashboardPage() {
                   key={trip.id}
                   onClick={() => setSelectedTripId(trip.id)}
                 >
+                  <label
+                    className="admin-trip-select"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <span className="sr-only">
+                      {text.selectTrip}: {timeText(trip.departure_time)} {trip.route_label}
+                    </span>
+                    <input
+                      checked={selectedTripIds.includes(trip.id)}
+                      onChange={() => toggleTripSelection(trip.id)}
+                      type="checkbox"
+                    />
+                  </label>
+
                   <div className="admin-trip-time">
                     <strong>{timeText(trip.departure_time)}</strong>
                     <span>{timeText(trip.arrival_time)}</span>
@@ -1065,7 +1212,19 @@ export default function AdminDashboardPage() {
                       <span>{trip.route_code}</span>
                       <span>{trip.platform || text.noPlatform}</span>
                       <span>{trip.vehicle?.label || text.vehicleUnassigned}</span>
-                      <span>{trip.driver?.full_name || text.driverUnassigned}</span>
+                      {trip.driver?.phone ? (
+                        <a
+                          className="admin-driver-call"
+                          href={`tel:${trip.driver.phone}`}
+                          onClick={(event) => event.stopPropagation()}
+                          title={`${text.callDriver}: ${trip.driver.phone}`}
+                        >
+                          <Phone size={13} aria-hidden="true" />
+                          {trip.driver.full_name || text.driverUnassigned}
+                        </a>
+                      ) : (
+                        <span>{trip.driver?.full_name || text.driverUnassigned}</span>
+                      )}
                     </div>
                     <div className="admin-progress">
                       <span style={{ width: `${load}%` }} />
@@ -1084,9 +1243,9 @@ export default function AdminDashboardPage() {
             })}
             {filteredOperationalTrips.length > tripListPageSize && (
               <div className="admin-pagination">
-                <button disabled={tripListPage === 1} onClick={() => setTripListPage((page) => page - 1)} type="button">Poprzednia</button>
-                <span>Strona {tripListPage} z {tripListPageCount}</span>
-                <button disabled={tripListPage === tripListPageCount} onClick={() => setTripListPage((page) => page + 1)} type="button">Następna</button>
+                <button disabled={tripListPage === 1} onClick={() => setTripListPage((page) => page - 1)} type="button">{text.prevPage}</button>
+                <span>{text.pageOf.replace("{page}", tripListPage).replace("{count}", tripListPageCount)}</span>
+                <button disabled={tripListPage === tripListPageCount} onClick={() => setTripListPage((page) => page + 1)} type="button">{text.nextPage}</button>
               </div>
             )}
           </div>
