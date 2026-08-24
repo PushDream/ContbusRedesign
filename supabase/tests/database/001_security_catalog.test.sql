@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public, pg_catalog;
 
-select plan(21);
+select plan(20);
 
 select ok(
   to_regprocedure('public.public_trip_schedule(date)') is not null,
@@ -353,33 +353,19 @@ select ok(
         ('public.update_contbus_fare_price(uuid,numeric)'),
         ('public.staff_schedule_overview()'),
         ('public.customer_booking_history()'),
-        ('public.report_assigned_trip_incident(uuid,text,text)')
-    ) as required(signature)
-  ),
-  'authenticated callers can execute the scoped operational RPCs'
-);
-
-select ok(
-  (
-    select bool_and(
-      to_regprocedure(unused_rpc.signature) is not null
-      and not coalesce(
-        has_function_privilege(
-          'authenticated',
-          to_regprocedure(unused_rpc.signature),
-          'EXECUTE'
-        ),
-        true
-      )
-    )
-    from (
-      values
+        ('public.report_assigned_trip_incident(uuid,text,text)'),
+        -- 20260816192454 revoked these three as unused, then 20260823110000
+        -- restored them: the native driver app calls all three for ticket
+        -- transfer. Each gates itself on current_app_role() in
+        -- ('driver','dispatcher','admin'), so the grant is defence in depth
+        -- rather than the access boundary. The anon assertions below still
+        -- hold and are what keeps them off the public API.
         ('public.lookup_ticket_trip(text[])'),
         ('public.assess_ticket_for_trip(text[],uuid)'),
         ('public.transfer_ticket_to_trip(text[],uuid)')
-    ) as unused_rpc(signature)
+    ) as required(signature)
   ),
-  'unused privileged ticket-transfer RPCs are not executable by authenticated callers'
+  'authenticated callers can execute the scoped operational RPCs'
 );
 
 select ok(
