@@ -55,7 +55,31 @@ export const fares = [
     note: "transfer do Modlina",
     stops: ["Warszawa Marriott", "Modlin terminal"],
   },
+  {
+    id: "warszawa-chopin",
+    from: "Warszawa Marriott",
+    to: "Lotnisko Chopina",
+    price: 25,
+    duration: "35m",
+    durationMinutes: 35,
+    note: "dojazd na Chopina",
+    stops: ["Warszawa Marriott", "Chopin stanowisko 6"],
+  },
 ];
+
+// Fares describe a corridor, not a heading - the return leg of every pair is
+// sold as the same product. Callers only ever have station names to go on, so
+// the match is deliberately order-insensitive.
+export function findFareForPair(from, to) {
+  if (!from || !to) return undefined;
+  const origin = String(from).toLowerCase();
+  const destination = String(to).toLowerCase();
+  return fares.find(
+    (fare) =>
+      (fare.from.toLowerCase() === origin && fare.to.toLowerCase() === destination) ||
+      (fare.from.toLowerCase() === destination && fare.to.toLowerCase() === origin),
+  );
+}
 
 export const stops = [
   {

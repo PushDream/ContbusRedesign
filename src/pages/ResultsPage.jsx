@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUp, CalendarDays, Clock, MapPin, Search, Users } from "lucide-react";
 import { useApp } from "../context/AppContext.jsx";
-import { fares } from "../data/content.js";
+import { fares, findFareForPair } from "../data/content.js";
 import { fetchDepartures } from "../lib/database.js";
 import { warsawToday as getTodayDate, warsawNowMinutes as getNowMinutes } from "../lib/warsawTime.js";
 
@@ -33,12 +33,7 @@ export default function ResultsPage() {
   const [draftPassengers, setDraftPassengers] = useState(passengers);
   const locations = ["Lublin", "Lotnisko Chopina", "Warszawa Marriott", "Lotnisko Modlin"];
 
-  const matchedFare =
-    fares.find(
-      (f) =>
-        f.from.toLowerCase() === from.toLowerCase() &&
-        f.to.toLowerCase() === to.toLowerCase(),
-    ) || fares[0];
+  const matchedFare = findFareForPair(from, to) || fares[0];
 
   useEffect(() => {
     let active = true;
@@ -135,7 +130,7 @@ export default function ResultsPage() {
           <div className="results-meta">
             <span>
               <MapPin size={14} aria-hidden="true" />
-              {matchedFare.duration}
+              {departures[0]?.duration || matchedFare.duration}
             </span>
             <span>
               <Users size={14} aria-hidden="true" />
