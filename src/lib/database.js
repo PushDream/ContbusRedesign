@@ -452,7 +452,7 @@ export async function fetchAdminOperations(date) {
   const { data: bookings, error: bookingsError } = tripIds.length
     ? await supabase
         .from("bookings")
-        .select("id, booking_reference, trip_id, buyer_name, buyer_email, buyer_phone, passenger_count, status, total_amount, currency, created_at")
+        .select("id, booking_reference, trip_id, customer_id, buyer_name, buyer_email, buyer_phone, passenger_count, status, total_amount, currency, created_at")
         .in("trip_id", tripIds)
         .order("created_at", { ascending: false })
     : { data: [], error: null };
@@ -613,4 +613,79 @@ export async function updateAdminProfileRole(profileId, role) {
     target_role: role,
   });
   if (error) throw error;
+}
+
+export async function setStaffPassengerCheckIn(passengerId, checkedIn) {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+
+  const { data, error } = await supabase.rpc("set_assigned_passenger_check_in", {
+    p_passenger_id: passengerId,
+    p_checked_in: checkedIn,
+  });
+  if (error) throw error;
+  if (data !== true) {
+    throw new Error("Passenger check-in was not applied — check staff permissions.");
+  }
+}
+
+export async function reportStaffTripIncident(tripId, severity, note) {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+
+  const { data, error } = await supabase.rpc("report_assigned_trip_incident", {
+    p_trip_id: tripId,
+    p_severity: severity,
+    p_note: note,
+  });
+  if (error) throw error;
+  if (data !== true) {
+    throw new Error("Incident report was not saved — check staff permissions.");
+  }
+}
+
+function normalizeTicketCodes(codes) {
+  return (Array.isArray(codes) ? codes : [codes])
+    .map((code) => String(code || "").trim())
+    .filter(Boolean);
+}
+
+export async function lookupStaffTicket(codes) {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+
+  const { data, error } = await supabase.rpc("lookup_ticket_trip", {
+    p_codes: normalizeTicketCodes(codes),
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data[0] || null : data || null;
+}
+
+export async function assessStaffTicketTransfer(codes, targetTripId) {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+
+  const { data, error } = await supabase.rpc("assess_ticket_for_trip", {
+    p_codes: normalizeTicketCodes(codes),
+    p_target_trip_id: targetTripId,
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data[0] || null : data || null;
+}
+
+export async function transferStaffTicket(codes, targetTripId) {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+
+  const { data, error } = await supabase.rpc("transfer_ticket_to_trip", {
+    p_codes: normalizeTicketCodes(codes),
+    p_target_trip_id: targetTripId,
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data[0] || null : data || null;
 }

@@ -2604,6 +2604,268 @@ h3 {
   align-items: center;
 }
 
+.admin-passenger-tags button {
+  padding: 5px 8px;
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.admin-passenger-tags button:hover:not(:disabled) {
+  border-color: var(--brand-dark);
+}
+
+.admin-passenger-tags button.checked {
+  color: var(--brand-dark);
+  background: var(--brand-soft-bg);
+  border-color: transparent;
+}
+
+.admin-passenger-tags button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+.admin-incident-form {
+  display: grid;
+  grid-template-columns: auto minmax(0, 130px) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  background: var(--surface-muted);
+  border-radius: 8px;
+}
+
+.admin-incident-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  color: var(--danger);
+  background: var(--danger-soft-bg);
+  border-radius: 8px;
+}
+
+.admin-incident-form select,
+.admin-incident-form input {
+  min-height: 42px;
+  width: 100%;
+  padding: 0 12px;
+  color: var(--text-strong);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.admin-rebooking {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.admin-rebooking-lead {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.admin-rebooking-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.admin-rebooking-search input,
+.admin-rebooking-target select {
+  min-height: 42px;
+  width: 100%;
+  padding: 0 12px;
+  color: var(--text-strong);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.admin-rebooking-error {
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--danger);
+  background: var(--danger-soft-bg);
+  border: 1px solid var(--danger-border);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.admin-rebooking-current {
+  display: grid;
+  gap: 3px;
+  padding: 12px;
+  background: var(--surface-muted);
+  border-radius: 8px;
+}
+
+.admin-rebooking-current strong {
+  color: var(--text-strong);
+}
+
+.admin-rebooking-current span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.admin-rebooking-target {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-rebooking-target > span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.admin-rebooking-assessment {
+  display: grid;
+  gap: 3px;
+  padding: 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.admin-rebooking-assessment.good {
+  color: var(--brand-dark);
+  background: var(--brand-soft-bg);
+}
+
+.admin-rebooking-assessment.bad {
+  color: var(--danger);
+  background: var(--danger-soft-bg);
+  border-color: var(--danger-border);
+}
+
+.admin-rebooking-assessment span {
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.admin-rebooking-transfer {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-users-panel {
+  margin-top: 18px;
+}
+
+.admin-users-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 14px 22px 0;
+}
+
+.admin-users-toolbar .admin-search-field {
+  flex: 1;
+  min-width: 220px;
+}
+
+.admin-users-count {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.admin-users-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  padding: 14px 22px 22px;
+}
+
+.admin-user-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+}
+
+.admin-user-card-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 122px;
+  gap: 10px;
+  align-items: center;
+}
+
+.admin-user-card-head strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-user-card-head span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.admin-user-card-head select {
+  min-height: 38px;
+  width: 100%;
+  padding: 0 10px;
+  color: var(--text-strong);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.admin-user-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-user-card-meta span,
+.admin-user-card-meta a {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  padding: 5px 9px;
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.admin-user-card-meta a {
+  color: var(--brand-dark);
+  background: var(--brand-soft-bg);
+}
+
+.admin-user-card .admin-link-button {
+  justify-self: start;
+}
+
 .admin-timeline-panel {
   margin-top: 18px;
 }
@@ -3101,6 +3363,24 @@ h3 {
   .admin-control-grid,
   .admin-trip-detail-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-incident-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-incident-icon {
+    display: none;
+  }
+
+  .admin-users-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-users-grid {
+    grid-template-columns: 1fr;
+    padding: 14px 16px 18px;
   }
 
   .admin-trip-numbers {

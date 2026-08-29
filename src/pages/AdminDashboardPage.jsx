@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
+  ArrowRightLeft,
   Bell,
   Bus,
   CalendarDays,
@@ -25,8 +26,13 @@ import {
   Wrench,
 } from "lucide-react";
 import {
+  assessStaffTicketTransfer,
   fetchAdminOperations,
   fetchDispatcherOverview,
+  lookupStaffTicket,
+  reportStaffTripIncident,
+  setStaffPassengerCheckIn,
+  transferStaffTicket,
   updateAdminBookingStatus,
   updateAdminProfileRole,
   updateAdminTrip,
@@ -188,6 +194,18 @@ export default function AdminDashboardPage() {
   const [tripListSort, setTripListSort] = useState("time");
   const [selectedTripIds, setSelectedTripIds] = useState([]);
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [incidentSeverity, setIncidentSeverity] = useState("info");
+  const [incidentNote, setIncidentNote] = useState("");
+  const [incidentSaving, setIncidentSaving] = useState(false);
+  const [ticketQuery, setTicketQuery] = useState("");
+  const [ticketLookup, setTicketLookup] = useState(null);
+  const [ticketAssessment, setTicketAssessment] = useState(null);
+  const [ticketTargetId, setTicketTargetId] = useState("");
+  const [ticketBusy, setTicketBusy] = useState("");
+  const [ticketError, setTicketError] = useState("");
+  const [userTab, setUserTab] = useState("team");
+  const [userQuery, setUserQuery] = useState("");
+  const [userPage, setUserPage] = useState(1);
 
   const loadDashboard = useCallback(async () => {
     if (!staff) return;
@@ -414,6 +432,168 @@ export default function AdminDashboardPage() {
       setSavingKey("");
     }
   };
+
+  const togglePassengerCheckIn = async (passenger) => {
+    const key = `passenger-${passenger.id}`;
+    setSavingKey(key);
+    try {
+      await setStaffPassengerCheckIn(passenger.id, !passenger.checked_in_at);
+      await reloadOperations();
+      notify(text.checkInSaved, "success");
+    } catch (error) {
+      notify(error.message || text.checkInFailed, "error");
+    } finally {
+      setSavingKey("");
+    }
+  };
+
+  const submitIncident = async (event) => {
+    event.preventDefault();
+    if (!selectedTrip || incidentSaving) return;
+    setIncidentSaving(true);
+    try {
+      await reportStaffTripIncident(selectedTrip.id, incidentSeverity, incidentNote.trim());
+      setIncidentNote("");
+      await reloadOperations();
+      notify(text.incidentSaved, "success");
+    } catch (error) {
+      notify(error.message || text.incidentSaveFailed, "error");
+    } finally {
+      setIncidentSaving(false);
+    }
+  };
+
+  const handleTicketLookup = async (event) => {
+    event.preventDefault();
+    const code = ticketQuery.trim();
+    if (!code || ticketBusy) return;
+    setTicketBusy("lookup");
+    setTicketError("");
+    setTicketAssessment(null);
+    setTicketTargetId("");
+    try {
+      const found = await lookupStaffTicket([code]);
+      setTicketLookup(found);
+      if (!found) setTicketError(text.ticketNotFound);
+    } catch (error) {
+      setTicketLookup(null);
+      setTicketError(error.message || text.ticketLookupFailed);
+    } finally {
+      setTicketBusy("");
+    }
+  };
+
+  const handleTicketTargetChange = async (tripId) => {
+    setTicketTargetId(tripId);
+    setTicketAssessment(null);
+    setTicketError("");
+    if (!tripId || !ticketLookup) return;
+    setTicketBusy("assess");
+    try {
+      const assessment = await assessStaffTicketTransfer([ticketLookup.ticket_code], tripId);
+      setTicketAssessment(assessment);
+    } catch (error) {
+      setTicketError(error.message || text.transferFailed);
+    } finally {
+      setTicketBusy("");
+    }
+  };
+
+  const handleTicketTransfer = async () => {
+    if (!ticketLookup || !ticketTargetId || ticketBusy || ticketAssessment?.result !== "transferable") return;
+    setTicketBusy("transfer");
+    setTicketError("");
+    try {
+      const outcome = await transferStaffTicket([ticketLookup.ticket_code], ticketTargetId);
+      if (outcome?.result === "transferred") {
+        notify(text.transferDone, "success");
+        setTicketQuery("");
+        setTicketLookup(null);
+        setTicketAssessment(null);
+        setTicketTargetId("");
+        await reloadOperations();
+      } else {
+        const label = text.transferResultLabels[outcome?.result] || text.transferFailed;
+        setTicketError(label);
+        notify(label, "error");
+      }
+    } catch (error) {
+      setTicketError(error.message || text.transferFailed);
+      notify(error.message || text.transferFailed, "error");
+    } finally {
+      setTicketBusy("");
+    }
+  };
+
+  // Targets stay on the source trip's route: the transfer RPC rejects cross-route
+  // moves, so trips from other routes would only produce dead-end options.
+  const ticketTargetOptions = useMemo(() => {
+    if (!ticketLookup) return [];
+    const sourceTrip = operationalTrips.find((trip) => trip.id === ticketLookup.trip_id) || null;
+    return operationalTrips.filter(
+      (trip) =>
+        trip.id !== ticketLookup.trip_id &&
+        !["arrived", "cancelled"].includes(trip.status) &&
+        (!sourceTrip || trip.route_code === sourceTrip.route_code),
+    );
+  }, [operationalTrips, ticketLookup]);
+
+  const userDirectory = useMemo(() => {
+    const tripsByDriver = {};
+    operationalTrips.forEach((trip) => {
+      if (!trip.driver_id) return;
+      (tripsByDriver[trip.driver_id] = tripsByDriver[trip.driver_id] || []).push(trip);
+    });
+    // trip_incidents.driver_id records whoever filed the report, staff included.
+    const incidentsByReporter = {};
+    (operations?.incidents || []).forEach((incident) => {
+      if (!incident.driver_id) return;
+      incidentsByReporter[incident.driver_id] = (incidentsByReporter[incident.driver_id] || 0) + 1;
+    });
+    const bookingsByCustomer = {};
+    operationalBookings.forEach((booking) => {
+      if (!booking.customer_id || booking.status === "cancelled") return;
+      const entry = (bookingsByCustomer[booking.customer_id] =
+        bookingsByCustomer[booking.customer_id] || { count: 0, revenue: 0 });
+      entry.count += 1;
+      entry.revenue += Number(booking.total_amount || 0);
+    });
+
+    return profiles.map((person) => {
+      const driverTrips = (tripsByDriver[person.id] || [])
+        .slice()
+        .sort((left, right) => timeText(left.departure_time).localeCompare(timeText(right.departure_time)));
+      return {
+        ...person,
+        driverTrips,
+        nextTrip: driverTrips.find((trip) => !["arrived", "cancelled"].includes(trip.status)) || null,
+        incidentCount: incidentsByReporter[person.id] || 0,
+        bookingStats: bookingsByCustomer[person.id] || null,
+      };
+    });
+  }, [operationalBookings, operationalTrips, operations?.incidents, profiles]);
+
+  const userTabCounts = useMemo(() => {
+    const team = userDirectory.filter((person) => person.role !== "customer").length;
+    return { team, customers: userDirectory.length - team, all: userDirectory.length };
+  }, [userDirectory]);
+
+  const filteredUsers = useMemo(() => {
+    const query = userQuery.trim().toLowerCase();
+    return userDirectory.filter((person) => {
+      const isTeam = person.role !== "customer";
+      const matchesTab = userTab === "all" || (userTab === "team" ? isTeam : !isTeam);
+      const matchesQuery =
+        !query ||
+        [person.full_name, person.phone, person.id]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(query));
+      return matchesTab && matchesQuery;
+    });
+  }, [userDirectory, userQuery, userTab]);
+  const userPageSize = 8;
+  const userPageCount = Math.max(1, Math.ceil(filteredUsers.length / userPageSize));
+  const visibleUsers = filteredUsers.slice((userPage - 1) * userPageSize, userPage * userPageSize);
 
   const busiestTrip = useMemo(
     () =>
@@ -884,6 +1064,40 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
+              <form className="admin-incident-form" onSubmit={submitIncident}>
+                <span className="admin-incident-icon" aria-hidden="true">
+                  <ShieldAlert size={16} />
+                </span>
+                <label>
+                  <span className="sr-only">{text.incidentSeverity}</span>
+                  <select
+                    disabled={incidentSaving}
+                    onChange={(event) => setIncidentSeverity(event.target.value)}
+                    value={incidentSeverity}
+                  >
+                    {["info", "warning", "critical"].map((value) => (
+                      <option key={value} value={value}>
+                        {text.incidentSeverityLabels[value] || value}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <input
+                  disabled={incidentSaving}
+                  maxLength={2000}
+                  onChange={(event) => setIncidentNote(event.target.value)}
+                  placeholder={text.incidentNotePlaceholder}
+                  value={incidentNote}
+                />
+                <button
+                  className="secondary-button"
+                  disabled={incidentSaving || incidentNote.trim().length < 3}
+                  type="submit"
+                >
+                  {incidentSaving ? text.incidentSending : text.fileIncident}
+                </button>
+              </form>
+
               <div className="admin-manifest-preview">
                 <div className="admin-manifest-toolbar">
                   <div>
@@ -956,10 +1170,17 @@ export default function AdminDashboardPage() {
                     </div>
                     <div className="admin-passenger-tags">
                       {booking.passengers.map((passenger) => (
-                        <span key={passenger.id}>
+                        <button
+                          className={passenger.checked_in_at ? "checked" : ""}
+                          disabled={savingKey === `passenger-${passenger.id}`}
+                          key={passenger.id}
+                          onClick={() => togglePassengerCheckIn(passenger)}
+                          title={passenger.checked_in_at ? text.undoCheckIn : text.checkInPassenger}
+                          type="button"
+                        >
                           {passenger.seat_number} · {passenger.ticket_code}
                           {passenger.checked_in_at ? " · OK" : ""}
-                        </span>
+                        </button>
                       ))}
                     </div>
                   </article>
@@ -1007,26 +1228,158 @@ export default function AdminDashboardPage() {
           </div>
         </aside>
 
-        {isAdmin && (
-          <aside className="admin-panel compact">
-            <div className="admin-panel-header">
-              <div>
-                <p className="eyebrow">{text.access}</p>
-                <h2>{text.userRoles}</h2>
-              </div>
-              <UserCog size={18} />
+        <aside className="admin-panel compact">
+          <div className="admin-panel-header">
+            <div>
+              <p className="eyebrow">{text.rebookingEyebrow}</p>
+              <h2>{text.rebookingTitle}</h2>
             </div>
-            <div className="admin-user-list">
-              {profiles.map((userProfile) => (
-                <article className="admin-user-row" key={userProfile.id}>
+            <ArrowRightLeft size={18} />
+          </div>
+          <div className="admin-rebooking">
+            <p className="admin-rebooking-lead">{text.rebookingLead}</p>
+            <form className="admin-rebooking-search" onSubmit={handleTicketLookup}>
+              <label>
+                <span className="sr-only">{text.ticketCodeLabel}</span>
+                <input
+                  onChange={(event) => setTicketQuery(event.target.value)}
+                  placeholder={text.ticketCodePlaceholder}
+                  value={ticketQuery}
+                />
+              </label>
+              <button
+                className="secondary-button"
+                disabled={ticketBusy === "lookup" || !ticketQuery.trim()}
+                type="submit"
+              >
+                {ticketBusy === "lookup" ? text.searchingTicket : text.findTicket}
+              </button>
+            </form>
+            {ticketError && <p className="admin-rebooking-error">{ticketError}</p>}
+            {ticketLookup && (
+              <>
+                <div className="admin-rebooking-current">
+                  <span>{text.currentTripLabel}</span>
+                  <strong>{ticketLookup.route_label}</strong>
+                  <span>
+                    {ticketLookup.departure_date} · {timeText(ticketLookup.departure_time)} -{" "}
+                    {timeText(ticketLookup.arrival_time)}
+                  </span>
+                  <span>
+                    {ticketLookup.booking_reference} · {ticketLookup.ticket_code} ·{" "}
+                    {bookingStatusLabels[ticketLookup.booking_status] || ticketLookup.booking_status}
+                  </span>
+                </div>
+                <label className="admin-rebooking-target">
+                  <span>{text.targetTripLabel}</span>
+                  <select
+                    disabled={ticketBusy !== ""}
+                    onChange={(event) => handleTicketTargetChange(event.target.value)}
+                    value={ticketTargetId}
+                  >
+                    <option value="">{text.chooseTargetTrip}</option>
+                    {ticketTargetOptions.map((trip) => (
+                      <option key={trip.id} value={trip.id}>
+                        {timeText(trip.departure_time)} · {trip.route_label} · {trip.passenger_count || 0}/
+                        {trip.capacity}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {ticketBusy === "assess" && <p className="admin-rebooking-lead">{text.checkingTransfer}</p>}
+                {ticketAssessment && (
+                  <div
+                    className={
+                      ticketAssessment.result === "transferable"
+                        ? "admin-rebooking-assessment good"
+                        : "admin-rebooking-assessment bad"
+                    }
+                  >
+                    <strong>
+                      {text.transferResultLabels[ticketAssessment.result] || ticketAssessment.result}
+                    </strong>
+                    {ticketAssessment.result === "transferable" && (
+                      <span>
+                        {ticketAssessment.seats_available} {text.seatsFreeShort} ·{" "}
+                        {ticketAssessment.passenger_name}
+                      </span>
+                    )}
+                  </div>
+                )}
+                <button
+                  className="primary-button admin-rebooking-transfer"
+                  disabled={ticketBusy !== "" || ticketAssessment?.result !== "transferable"}
+                  onClick={handleTicketTransfer}
+                  type="button"
+                >
+                  <ArrowRightLeft size={16} />
+                  {ticketBusy === "transfer" ? text.transferring : text.transferTicket}
+                </button>
+              </>
+            )}
+          </div>
+        </aside>
+      </section>
+
+      {isAdmin && (
+        <section className="admin-panel admin-users-panel">
+          <div className="admin-panel-header">
+            <div>
+              <p className="eyebrow">{text.teamEyebrow}</p>
+              <h2>{text.teamTitle}</h2>
+            </div>
+            <UserCog size={18} />
+          </div>
+          <p className="admin-command-lead">{text.teamLead}</p>
+          <div className="admin-users-toolbar">
+            <div className="admin-segmented">
+              {[
+                ["team", text.userTabTeam],
+                ["customers", text.userTabCustomers],
+                ["all", text.userTabAll],
+              ].map(([value, label]) => (
+                <button
+                  className={userTab === value ? "active" : ""}
+                  key={value}
+                  onClick={() => {
+                    setUserTab(value);
+                    setUserPage(1);
+                  }}
+                  type="button"
+                >
+                  {label} · {userTabCounts[value]}
+                </button>
+              ))}
+            </div>
+            <label className="admin-search-field">
+              <span className="sr-only">{text.userSearchPlaceholder}</span>
+              <input
+                onChange={(event) => {
+                  setUserQuery(event.target.value);
+                  setUserPage(1);
+                }}
+                placeholder={text.userSearchPlaceholder}
+                type="search"
+                value={userQuery}
+              />
+            </label>
+            <span className="admin-users-count">
+              {text.usersCount.replace("{count}", filteredUsers.length)}
+            </span>
+          </div>
+          <div className="admin-users-grid">
+            {visibleUsers.length === 0 && <p className="admin-empty">{text.noMatchingUsers}</p>}
+            {visibleUsers.map((person) => (
+              <article className="admin-user-card" key={person.id}>
+                <div className="admin-user-card-head">
                   <div>
-                    <strong>{userProfile.full_name || text.unnamed}</strong>
-                    <span>{userProfile.phone || userProfile.id.slice(0, 8)}</span>
+                    <strong>{person.full_name || text.unnamed}</strong>
+                    <span>{person.phone || person.id.slice(0, 8)}</span>
                   </div>
                   <select
-                    disabled={savingKey === `profile-${userProfile.id}`}
-                    value={userProfile.role}
-                    onChange={(event) => saveProfileRole(userProfile.id, event.target.value)}
+                    disabled={savingKey === `profile-${person.id}`}
+                    value={person.role}
+                    onChange={(event) => saveProfileRole(person.id, event.target.value)}
                   >
                     {Object.entries(roleLabels).map(([value, label]) => (
                       <option key={value} value={value}>
@@ -1034,12 +1387,88 @@ export default function AdminDashboardPage() {
                       </option>
                     ))}
                   </select>
-                </article>
-              ))}
+                </div>
+                <div className="admin-user-card-meta">
+                  {person.role === "driver" ? (
+                    <>
+                      <span>
+                        <Bus size={13} />
+                        {person.driverTrips.length
+                          ? `${person.driverTrips.length} ${text.tripsTodayShort}`
+                          : text.noTripsToday}
+                      </span>
+                      {person.nextTrip && (
+                        <span>
+                          <Clock3 size={13} />
+                          {text.nextTripShort} {timeText(person.nextTrip.departure_time)} ·{" "}
+                          {person.nextTrip.route_code}
+                        </span>
+                      )}
+                      {person.incidentCount > 0 && (
+                        <span>
+                          <ShieldAlert size={13} />
+                          {person.incidentCount} {text.incidentsTodayShort}
+                        </span>
+                      )}
+                      {person.phone && (
+                        <a className="admin-driver-call" href={`tel:${person.phone}`}>
+                          <Phone size={13} aria-hidden="true" />
+                          {text.callDriver}
+                        </a>
+                      )}
+                    </>
+                  ) : person.role === "customer" ? (
+                    <>
+                      <span>
+                        <Ticket size={13} />
+                        {person.bookingStats
+                          ? `${person.bookingStats.count} ${text.bookingsTodayShort}`
+                          : text.noBookingsToday}
+                      </span>
+                      {person.bookingStats && (
+                        <span>
+                          <CircleDollarSign size={13} />
+                          {money(person.bookingStats.revenue, text)}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span>
+                      <UserCog size={13} />
+                      {roleLabels[person.role] || person.role}
+                    </span>
+                  )}
+                </div>
+                {person.role === "driver" && selectedTrip && selectedTrip.driver_id !== person.id && (
+                  <button
+                    className="admin-link-button"
+                    disabled={savingKey === `trip-${selectedTrip.id}`}
+                    onClick={() => saveTripField(selectedTrip.id, { driver_id: person.id }, text.driverAssigned)}
+                    type="button"
+                  >
+                    {text.assignToSelectedTrip.replace("{time}", timeText(selectedTrip.departure_time))}
+                  </button>
+                )}
+              </article>
+            ))}
+          </div>
+          {filteredUsers.length > userPageSize && (
+            <div className="admin-pagination">
+              <button disabled={userPage === 1} onClick={() => setUserPage((page) => page - 1)} type="button">
+                {text.prevPage}
+              </button>
+              <span>{text.pageOf.replace("{page}", userPage).replace("{count}", userPageCount)}</span>
+              <button
+                disabled={userPage === userPageCount}
+                onClick={() => setUserPage((page) => page + 1)}
+                type="button"
+              >
+                {text.nextPage}
+              </button>
             </div>
-          </aside>
-        )}
-      </section>
+          )}
+        </section>
+      )}
 
       <section className="admin-panel admin-timeline-panel">
         <div className="admin-panel-header">
