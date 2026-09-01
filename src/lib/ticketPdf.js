@@ -227,5 +227,5 @@ export async function createTicketPdf(ticket, assets = {}) {
 export async function downloadTicketPdf(ticket) {
   const doc = await createTicketPdf(ticket);
 
-  doc.save(`${ticket.bookingCode}.pdf`);
+  doc.save(`bilet-${ticket.bookingCode}.pdf`);
 }

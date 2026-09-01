@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Bus, CalendarClock, Plus, RefreshCw, Sparkles, Trash2, X } from "lucide-react";
+import { AlertTriangle, Bus, CalendarClock, Plus, Printer, RefreshCw, Sparkles, Trash2, X } from "lucide-react";
 import {
   createDeparture,
   deleteDeparture,
@@ -145,6 +145,7 @@ export default function AdminSchedulesPage() {
   const [departureStatus, setDepartureStatus] = useState("all");
   const [departurePages, setDeparturePages] = useState(firstDeparturePages);
   const [departureDirection, setDepartureDirection] = useState("all");
+  const [printTimetableOpen, setPrintTimetableOpen] = useState(false);
 
   const [tripFilterStart, setTripFilterStart] = useState(() => todayDateOnly());
   const [tripFilterEnd, setTripFilterEnd] = useState(() => addDays(todayDateOnly(), 30));
@@ -495,6 +496,10 @@ export default function AdminSchedulesPage() {
             <button className="secondary-button" disabled={loading} onClick={reload} type="button">
               <RefreshCw size={17} />
               {text.refresh}
+            </button>
+            <button className="secondary-button" onClick={() => setPrintTimetableOpen(true)} type="button">
+              <Printer size={17} />
+              {text.print || "Drukuj"}
             </button>
             <button className="secondary-button" onClick={handleSignOut} type="button">
               {text.logout}
@@ -1024,6 +1029,80 @@ export default function AdminSchedulesPage() {
                   <button className="primary-button danger" onClick={confirmDeleteDeparture} type="button">
                     {text.confirm}
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Printable Timetable Sheet */}
+        {printTimetableOpen && (
+          <div className="admin-modal-overlay" onClick={() => setPrintTimetableOpen(false)}>
+            <div className="admin-modal-sheet admin-print-manifest" onClick={(e) => e.stopPropagation()}>
+              <div className="admin-print-header">
+                <div>
+                  <span className="admin-print-brand">CONTBUS POLSKA</span>
+                  <h2>{text.officialTimetable}</h2>
+                  <p className="admin-print-meta">
+                    Linia regularna: <strong>Lublin ⇄ Warszawa ⇄ Lotnisko Chopina ⇄ Lotnisko Modlin</strong>
+                  </p>
+                </div>
+                <div className="admin-print-actions no-print">
+                  <button className="primary-button" onClick={() => window.print()} type="button">
+                    <Printer size={16} />
+                    {text.print}
+                  </button>
+                  <button className="secondary-button" onClick={() => setPrintTimetableOpen(false)} type="button">
+                    {text.close}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gap: "20px" }}>
+                {DIRECTIONS.map((dir) => {
+                  const dirDepartures = (schedule?.departures || [])
+                    .filter((d) => d.direction === dir.value && d.is_active)
+                    .sort((a, b) => timeText(a.departure_time).localeCompare(timeText(b.departure_time)));
+                  if (!dirDepartures.length) return null;
+                  return (
+                    <div key={dir.value} style={{ borderBottom: "1px solid #e2e8f0", paddingBottom: "12px" }}>
+                      <h3 style={{ margin: "0 0 8px", fontSize: "1rem", color: "#008a3d" }}>
+                        {text[dir.labelKey] || dir.value}
+                      </h3>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                        {dirDepartures.map((dep) => (
+                          <div
+                            key={dep.id}
+                            style={{
+                              padding: "4px 8px",
+                              background: "#f1f5f9",
+                              borderRadius: "4px",
+                              fontSize: "0.82rem",
+                              fontWeight: "700",
+                            }}
+                          >
+                            <span>{dep.departure_time?.slice(0, 5)}</span>
+                            {dep.days_of_week?.length < 7 && (
+                              <small style={{ display: "block", color: "#64748b", fontSize: "0.68rem" }}>
+                                {formatDays(dep.days_of_week, text)}
+                              </small>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="admin-print-signatures">
+                <div className="admin-sig-box">
+                  <p>{text.dispatcherSignature}:</p>
+                  <div className="admin-sig-line" />
+                </div>
+                <div className="admin-sig-box">
+                  <p>{text.inspectorNotes}:</p>
+                  <div className="admin-sig-line" />
                 </div>
               </div>
             </div>

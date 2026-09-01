@@ -15,6 +15,7 @@ import {
   LogOut,
   MapPin,
   Phone,
+  Printer,
   RefreshCw,
   Route,
   Search,
@@ -206,6 +207,7 @@ export default function AdminDashboardPage() {
   const [userTab, setUserTab] = useState("team");
   const [userQuery, setUserQuery] = useState("");
   const [userPage, setUserPage] = useState(1);
+  const [printManifestOpen, setPrintManifestOpen] = useState(false);
 
   const loadDashboard = useCallback(async () => {
     if (!staff) return;
@@ -282,6 +284,43 @@ export default function AdminDashboardPage() {
   const drivers = useMemo(() => operations?.drivers || [], [operations]);
   const profiles = useMemo(() => operations?.profiles || [], [operations]);
   const selectedTrip = operationalTrips.find((trip) => trip.id === selectedTripId) || operationalTrips[0] || null;
+
+  const corridorStats = useMemo(() => {
+    const corridors = [
+      {
+        id: "lublin-warszawa",
+        name: "Lublin ⇄ Warszawa",
+        match: (r) => (r.includes("Warszawa") || r.includes("Warsaw")) && !r.includes("Chopin") && !r.includes("Modlin"),
+      },
+      {
+        id: "lublin-chopin",
+        name: "Lublin ⇄ Lotnisko Chopina",
+        match: (r) => r.includes("Chopin"),
+      },
+      {
+        id: "lublin-modlin",
+        name: "Lublin ⇄ Lotnisko Modlin",
+        match: (r) => r.includes("Modlin"),
+      },
+    ];
+
+    return corridors.map((c) => {
+      const matchedTrips = operationalTrips.filter((t) => c.match(t.route_label || t.route_code || ""));
+      const active = matchedTrips.filter((t) => ["boarding", "enroute", "delayed"].includes(t.status)).length;
+      const delayed = matchedTrips.filter((t) => t.status === "delayed").length;
+      const total = matchedTrips.length;
+      const punctuality = total > 0 ? Math.round(((total - delayed) / total) * 100) : 100;
+      const nextTrip = matchedTrips.find((t) => ["scheduled", "preparing"].includes(t.status));
+      return {
+        ...c,
+        total,
+        active,
+        punctuality,
+        delayed,
+        nextTripTime: nextTrip ? nextTrip.departure_time : null,
+      };
+    });
+  }, [operationalTrips]);
   const filteredOperationalTrips = useMemo(() => {
     const query = tripListQuery.trim().toLowerCase();
     const matched = operationalTrips.filter((trip) => {
@@ -869,6 +908,45 @@ export default function AdminDashboardPage() {
         <MetricCard icon={ClipboardList} label={text.vehicles} value={summary.vehicles || 0} hint={text.staffAuthHint} />
       </section>
 
+      {/* Fleet Operational Corridors */}
+      <section className="admin-corridors-section">
+        <div className="admin-panel-header">
+          <div>
+            <p className="eyebrow">{text.fleetCorridors}</p>
+            <h2>{text.activeRoutes}</h2>
+          </div>
+          <Activity size={18} />
+        </div>
+        <div className="admin-corridors-grid">
+          {corridorStats.map((c) => (
+            <article className="admin-corridor-card" key={c.id}>
+              <div className="admin-corridor-top">
+                <h3>{c.name}</h3>
+                <span className={`admin-corridor-pill ${c.active > 0 ? "live" : "idle"}`}>
+                  {c.active > 0 ? `${c.active} ${text.activeEnRoute}` : text.tripStatusLabels?.scheduled || "Plan"}
+                </span>
+              </div>
+              <div className="admin-corridor-metrics">
+                <div>
+                  <span>{text.trips}</span>
+                  <strong>{c.total}</strong>
+                </div>
+                <div>
+                  <span>{text.punctuality}</span>
+                  <strong className={c.punctuality >= 90 ? "text-good" : "text-warn"}>
+                    {c.punctuality}%
+                  </strong>
+                </div>
+                <div>
+                  <span>{text.departure}</span>
+                  <strong>{c.nextTripTime || "--:--"}</strong>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="admin-command-grid">
         <div className="admin-panel admin-command-panel">
           <div className="admin-panel-header">
@@ -1123,6 +1201,16 @@ export default function AdminDashboardPage() {
                       </button>
                     ))}
                   </div>
+                  <button
+                    aria-label={text.printManifest || "Print"}
+                    className="admin-icon-button"
+                    disabled={!selectedTripBookings.length}
+                    onClick={() => setPrintManifestOpen(true)}
+                    title={text.printManifest}
+                    type="button"
+                  >
+                    <Printer size={17} />
+                  </button>
                   <button
                     aria-label={text.exportManifest || "Download"}
                     className="admin-icon-button"
@@ -1738,6 +1826,93 @@ export default function AdminDashboardPage() {
           </div>
         </aside>
       </section>
+
+      {/* Printable Passenger Manifest Modal */}
+      {printManifestOpen && selectedTrip && (
+        <div className="admin-modal-overlay" onClick={() => setPrintManifestOpen(false)}>
+          <div className="admin-modal-sheet admin-print-manifest" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-print-header">
+              <div>
+                <span className="admin-print-brand">CONTBUS POLSKA</span>
+                <h2>{text.carrierInspectionRoster}</h2>
+                <p className="admin-print-meta">
+                  {text.tripDate}: <strong>{date}</strong> · {text.departureTime}: <strong>{selectedTrip.departure_time}</strong> · {text.route}: <strong>{selectedTrip.route_label}</strong>
+                </p>
+              </div>
+              <div className="admin-print-actions no-print">
+                <button className="primary-button" onClick={() => window.print()} type="button">
+                  <Printer size={16} />
+                  {text.print}
+                </button>
+                <button className="secondary-button" onClick={() => setPrintManifestOpen(false)} type="button">
+                  {text.close}
+                </button>
+              </div>
+            </div>
+
+            <div className="admin-print-summary-grid">
+              <div>
+                <span>{text.vehicle}</span>
+                <strong>{selectedTrip.vehicle?.plate_number || selectedTrip.vehicle?.label || selectedTrip.vehicle_id || text.assignPending}</strong>
+              </div>
+              <div>
+                <span>{text.driver}</span>
+                <strong>{selectedTrip.driver?.full_name || selectedTrip.driver?.phone || selectedTrip.driver_id || text.assignPending}</strong>
+              </div>
+              <div>
+                <span>{text.platform}</span>
+                <strong>{selectedTrip.platform || text.noPlatform}</strong>
+              </div>
+              <div>
+                <span>{text.passengers}</span>
+                <strong>{selectedTrip.passenger_count || 0} / {selectedTrip.capacity}</strong>
+              </div>
+            </div>
+
+            <table className="admin-print-table">
+              <thead>
+                <tr>
+                  <th>{text.seatNumber}</th>
+                  <th>{text.passengerName}</th>
+                  <th>{text.ticketCode}</th>
+                  <th>{text.bookings} (Ref)</th>
+                  <th>{text.stopDestination}</th>
+                  <th>{text.checkInState}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedTripBookings.flatMap((b) =>
+                  b.passengers.map((p) => (
+                    <tr key={p.id}>
+                      <td><strong>{p.seat_number}</strong></td>
+                      <td>{p.full_name || b.buyer_name}</td>
+                      <td><code>{p.ticket_code}</code></td>
+                      <td>{b.booking_reference}</td>
+                      <td>{p.dropoff_stop || selectedTrip.destination_name || "Dworzec docelowy"}</td>
+                      <td>
+                        <span className={p.checked_in_at ? "print-badge ok" : "print-badge pending"}>
+                          {p.checked_in_at ? "✓ Odprawiony" : "Oczekuje"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+
+            <div className="admin-print-signatures">
+              <div className="admin-sig-box">
+                <p>{text.dispatcherSignature}:</p>
+                <div className="admin-sig-line" />
+              </div>
+              <div className="admin-sig-box">
+                <p>{text.inspectorNotes}:</p>
+                <div className="admin-sig-line" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
       )}
     </AdminAuthGate>
