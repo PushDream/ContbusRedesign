@@ -5,8 +5,7 @@ import { useApp } from "../context/AppContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
 import { logoUrl } from "../data/content.js";
 import TicketQr from "../components/TicketQr.jsx";
-import { cancelPublicBooking, lookupPublicBooking } from "../lib/database.js";
-import { downloadTicketPdf } from "../lib/ticketPdf.js";
+import { cancelPublicBooking, lookupPublicBooking, requestTicketPdf } from "../lib/database.js";
 
 function routeParts(route) {
   const [from = "-", to = "-"] = String(route || "").split(" - ");
@@ -14,7 +13,7 @@ function routeParts(route) {
 }
 
 export default function MyTicketsPage() {
-  const { t } = useApp();
+  const { t, language } = useApp();
   const notify = useToast();
   const [input, setInput] = useState("");
   const [email, setEmail] = useState("");
@@ -65,35 +64,18 @@ export default function MyTicketsPage() {
 
   const handleDownloadPdf = async () => {
     if (!ticket) return;
-    const { from, to } = routeParts(ticket.route);
     setDownloadingPdf(true);
     try {
-      await downloadTicketPdf({
-        bookingCode: ticket.reference,
-        from,
-        to,
-        date: ticket.departureDate,
-        time: ticket.departureTime,
-        arrival: ticket.arrivalTime,
-        passengerName: ticket.buyerName,
-        seats: ticket.seatNumbers.join(", ") || "-",
-        passengers: ticket.passengerCount,
-        price: `${ticket.totalAmount} ${ticket.currency === "PLN" ? "zł" : ticket.currency}`,
-        payload: ticket.ticketCodes[0] || ticket.reference,
-        logoUrl,
-        labels: {
-          bookingCode: t.manageCode,
-          departure: t.departureShort,
-          arrival: t.arrivalShort,
-          date: t.date,
-          passenger: t.fieldName,
-          passengers: t.passengers,
-          seats: t.seatsSelected,
-          price: t.total,
-          footer: t.pdfFooter,
-        },
-      });
+      const url =
+        ticket.ticketPdfUrl ||
+        (await requestTicketPdf({ bookingId: ticket.id, lang: language }));
+      if (!ticket.ticketPdfUrl) {
+        setTicket((current) => (current ? { ...current, ticketPdfUrl: url } : current));
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
       notify(t.toastPdfReady, "success");
+    } catch (error) {
+      notify(error.message || t.manageNotFound, "error");
     } finally {
       setDownloadingPdf(false);
     }

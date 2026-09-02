@@ -16,7 +16,7 @@ import {
 import { useApp } from "../context/AppContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
-import { createBookingRecord, resolveDeparture } from "../lib/database.js";
+import { createBookingRecord, requestTicketPdf, resolveDeparture } from "../lib/database.js";
 import {
   buildSeatMap,
   estimateArrival,
@@ -27,7 +27,6 @@ import {
 } from "../data/content.js";
 import SeatMap from "../components/SeatMap.jsx";
 import TicketQr from "../components/TicketQr.jsx";
-import { downloadTicketPdf } from "../lib/ticketPdf.js";
 import { warsawToday } from "../lib/warsawTime.js";
 
 function genBookingCode(seed) {
@@ -53,7 +52,7 @@ function autoAssignSeats(fareId, chosen, needed) {
 }
 
 export default function BookingPage() {
-  const { t } = useApp();
+  const { t, language } = useApp();
   const { profile, session } = useAuth();
   const notify = useToast();
   const [searchParams] = useSearchParams();
@@ -137,7 +136,6 @@ export default function BookingPage() {
   const baseTotal = routePrice * passengers;
   const fee = 0;
   const total = baseTotal + extrasTotal + fee;
-  const paidTotal = Number(databaseBooking?.total_amount || total);
   const displayBookingCode = databaseBooking?.booking_reference || bookingCode;
   const ticketCode = databaseBooking?.ticket_codes?.[0] || databaseBooking?.ticket_code || displayBookingCode;
 
@@ -199,32 +197,20 @@ export default function BookingPage() {
   const handleDownloadPdf = async () => {
     setDownloadingPdf(true);
     try {
-      await downloadTicketPdf({
-        bookingCode: displayBookingCode,
-        from,
-        to,
-        date: new Date(date + "T00:00:00").toLocaleDateString(t.locale),
-        time: departure,
-        arrival,
-        passengerName: `${buyer.firstName} ${buyer.lastName}`,
-        seats: effectiveSeats.join(", "),
-        passengers,
-        price: `${paidTotal} zł`,
-        payload: ticketPayload,
-        logoUrl,
-        labels: {
-          bookingCode: t.manageCode,
-          departure: t.departureShort,
-          arrival: t.arrivalShort,
-          date: t.date,
-          passenger: t.fieldName,
-          passengers: t.passengers,
-          seats: t.seatsSelected,
-          price: t.total,
-          footer: t.pdfFooter,
-        },
-      });
+      const cachedUrl = databaseBooking?.ticket_pdf_url || databaseBooking?.ticketPdfUrl;
+      const url =
+        cachedUrl ||
+        (await requestTicketPdf({
+          bookingId: databaseBooking?.booking_id || databaseBooking?.id,
+          lang: language,
+        }));
+      if (!cachedUrl) {
+        setDatabaseBooking((current) => (current ? { ...current, ticket_pdf_url: url } : current));
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
       notify(t.toastPdfReady, "success");
+    } catch (error) {
+      notify(error.message || t.bookingSaveFailed, "error");
     } finally {
       setDownloadingPdf(false);
     }

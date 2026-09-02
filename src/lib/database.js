@@ -214,6 +214,7 @@ export async function fetchCustomerBookings() {
   return rows.map((booking) => ({
     id: booking.id || booking.booking_id,
     reference: booking.reference || booking.booking_reference,
+    ticketPdfUrl: booking.ticketPdfUrl || booking.ticket_pdf_url || null,
     status: booking.status || booking.booking_status,
     passengerCount: Number(booking.passengerCount ?? booking.passenger_count ?? 0),
     totalAmount: Number(booking.totalAmount ?? booking.total_amount ?? 0),
@@ -235,6 +236,7 @@ function mapLookupBooking(booking) {
   return {
     id: booking.booking_id,
     reference: booking.booking_reference,
+    ticketPdfUrl: booking.ticket_pdf_url || null,
     status: booking.booking_status,
     passengerCount: booking.passenger_count,
     totalAmount: Number(booking.total_amount),
@@ -263,6 +265,28 @@ export async function lookupPublicBooking({ code, email }) {
 
   if (error) throw error;
   return mapLookupBooking(Array.isArray(data) ? data[0] : data);
+}
+
+// Server-side ticket PDF generation. The `generate-ticket-pdf` Edge Function
+// renders the PDF with pdf-lib, stores it in the `ticket-pdfs` bucket, writes the
+// public URL back to `bookings.ticket_pdf_url` and returns it. `supabase.functions
+// .invoke` forwards the current session's JWT (or the anon key for public
+// lookups) in the Authorization header automatically.
+export async function requestTicketPdf({ bookingId, lang }) {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured for this deployment.");
+  }
+  if (!bookingId) {
+    throw new Error("This booking is not ready for a ticket yet.");
+  }
+
+  const { data, error } = await supabase.functions.invoke("generate-ticket-pdf", {
+    body: { bookingId, lang: lang === "pl" ? "pl" : "en" },
+  });
+
+  if (error) throw error;
+  if (!data?.url) throw new Error("Ticket service did not return a URL.");
+  return data.url;
 }
 
 export async function cancelPublicBooking({ code, email }) {

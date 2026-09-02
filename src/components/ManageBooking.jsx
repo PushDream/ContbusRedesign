@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Download, Mail, Search, TicketX, TriangleAlert } from "lucide-react";
-import { findFareForPair, logoUrl } from "../data/content.js";
+import { findFareForPair } from "../data/content.js";
+import { useApp } from "../context/AppContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
-import { cancelPublicBooking, lookupPublicBooking } from "../lib/database.js";
-import { downloadTicketPdf } from "../lib/ticketPdf.js";
+import { cancelPublicBooking, lookupPublicBooking, requestTicketPdf } from "../lib/database.js";
 import LiveTracker from "./LiveTracker.jsx";
 
 function routeParts(route) {
@@ -12,6 +12,7 @@ function routeParts(route) {
 }
 
 export default function ManageBooking({ t }) {
+  const { language } = useApp();
   const notify = useToast();
   const [code, setCode] = useState("");
   const [email, setEmail] = useState("");
@@ -59,35 +60,18 @@ export default function ManageBooking({ t }) {
   };
 
   const handleDownloadPdf = async () => {
-    const route = routeParts(booking.route);
     setDownloadingPdf(true);
     try {
-      await downloadTicketPdf({
-        bookingCode: booking.reference,
-        from: route.from,
-        to: route.to,
-        date: booking.departureDate,
-        time: booking.departureTime,
-        arrival: booking.arrivalTime,
-        passengerName: booking.buyerName,
-        seats: booking.seatNumbers.join(", ") || "-",
-        passengers: booking.passengerCount,
-        price: `${booking.totalAmount} ${booking.currency === "PLN" ? "zł" : booking.currency}`,
-        payload: booking.ticketCodes[0] || booking.reference,
-        logoUrl,
-        labels: {
-          bookingCode: t.manageCode,
-          departure: t.departureShort,
-          arrival: t.arrivalShort,
-          date: t.date,
-          passenger: t.fieldName,
-          passengers: t.passengers,
-          seats: t.seatsSelected,
-          price: t.total,
-          footer: t.pdfFooter,
-        },
-      });
+      const url =
+        booking.ticketPdfUrl ||
+        (await requestTicketPdf({ bookingId: booking.id, lang: language }));
+      if (!booking.ticketPdfUrl) {
+        setBooking((current) => (current ? { ...current, ticketPdfUrl: url } : current));
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
       notify(t.toastPdfReady, "success");
+    } catch (error) {
+      notify(error.message || t.manageNotFound, "error");
     } finally {
       setDownloadingPdf(false);
     }
