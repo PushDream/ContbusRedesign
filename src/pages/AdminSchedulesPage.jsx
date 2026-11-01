@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Bus, CalendarClock, Plus, Printer, RefreshCw, Sparkles, Trash2, X } from "lucide-react";
+import { AlertTriangle, Bus, CalendarClock, CheckCircle2, Plus, Printer, RefreshCw, Sparkles, Trash2, X } from "lucide-react";
 import {
   createDeparture,
   deleteDeparture,
   fetchScheduleData,
   fetchTripAssignments,
+  fetchTripGenerationStatus,
   generateContbusTrips,
   updateDeparture,
   updateFarePrice,
@@ -105,6 +106,58 @@ function DaysPicker({ value, onToggle, text, disabled }) {
   );
 }
 
+const AUTO_GENERATION_STALE_MS = 36 * 60 * 60 * 1000;
+const DATE_LOCALES = { pl: "pl-PL", en: "en-GB", uk: "uk-UA" };
+
+function AutoGenerationStatus({ status, language, text }) {
+  if (!status) return null;
+
+  const locale = DATE_LOCALES[language] || DATE_LOCALES.pl;
+  const formatTime = (value) =>
+    value
+      ? new Date(value).toLocaleString(locale, {
+          timeZone: "Europe/Warsaw",
+          dateStyle: "short",
+          timeStyle: "short",
+        })
+      : "—";
+  const formatDate = (value) =>
+    value ? new Date(`${value}T12:00:00Z`).toLocaleDateString(locale, { dateStyle: "medium" }) : "—";
+
+  if (status.lastError) {
+    return (
+      <div className="admin-alert danger">
+        <AlertTriangle size={18} />
+        <span>{text.autoGenerationFailed.replace("{error}", status.lastError)}</span>
+      </div>
+    );
+  }
+
+  if (status.stale) {
+    return (
+      <div className="admin-alert">
+        <AlertTriangle size={18} />
+        <span>{text.autoGenerationStale.replace("{time}", formatTime(status.lastSuccessAt))}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="admin-auto-generation">
+      <CheckCircle2 size={18} />
+      <div>
+        <strong>{text.autoGenerationTitle}</strong>
+        <p>
+          {text.autoGenerationHealthy
+            .replace("{date}", formatDate(status.bookableUntil))
+            .replace("{time}", formatTime(status.lastRunAt))}
+        </p>
+        <p>{text.autoGenerationHint}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminSchedulesPage() {
   const { language } = useApp();
   const text = adminCopy[language] || adminCopy.pl;
@@ -141,6 +194,7 @@ export default function AdminSchedulesPage() {
   const [generateStart, setGenerateStart] = useState(() => todayDateOnly());
   const [generateEnd, setGenerateEnd] = useState(() => addDays(todayDateOnly(), 60));
   const [generating, setGenerating] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState(null);
   const [departureQuery, setDepartureQuery] = useState("");
   const [departureStatus, setDepartureStatus] = useState("all");
   const [departurePages, setDeparturePages] = useState(firstDeparturePages);
@@ -161,6 +215,22 @@ export default function AdminSchedulesPage() {
     const data = await fetchScheduleData();
     setSchedule(data);
   }, []);
+
+  const reloadGenerationStatus = useCallback(async () => {
+    try {
+      const status = await fetchTripGenerationStatus();
+      const lastSuccess = status.lastSuccessAt ? new Date(status.lastSuccessAt).getTime() : 0;
+      setGenerationStatus({ ...status, stale: Date.now() - lastSuccess > AUTO_GENERATION_STALE_MS });
+    } catch {
+      setGenerationStatus(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!staff) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    reloadGenerationStatus();
+  }, [staff, reloadGenerationStatus]);
 
   const reloadTrips = useCallback(async () => {
     if (!tripFilterStart || !tripFilterEnd || tripFilterStart > tripFilterEnd) return;
@@ -564,6 +634,8 @@ export default function AdminSchedulesPage() {
               </div>
               <CalendarClock size={18} />
             </div>
+
+            <AutoGenerationStatus language={language} status={generationStatus} text={text} />
 
             <div className="admin-generate-panel">
               <div className="admin-generate-header">

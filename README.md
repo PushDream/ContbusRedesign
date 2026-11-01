@@ -27,8 +27,7 @@ src/
   components/             one component per section/feature
   pages/DriverAppPage.jsx Supabase-backed driver operations app
 supabase/
-  migrations/             reproducible PostgreSQL schema and security history
-  tests/database/         pgTAP security, RLS, capacity, and index tests
+  README.md               schema, tests and functions live in contbus-backend
   App.jsx                 page composition
 public/
   icon.svg, logos and fonts   static assets

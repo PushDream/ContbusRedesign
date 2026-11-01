@@ -282,6 +282,7 @@ export async function requestTicketPdf({ bookingId, lang }) {
 
   const { data, error } = await supabase.functions.invoke("generate-ticket-pdf", {
     body: { bookingId, lang: lang === "pl" ? "pl" : (lang === "uk" || lang === "ua") ? "uk" : "en" },
+  });
 
   if (error) throw error;
   if (!data?.url) throw new Error("Ticket service did not return a URL.");

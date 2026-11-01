@@ -9,6 +9,7 @@ import MyTicketsPage from "./pages/MyTicketsPage.jsx";
 import ContactPage from "./pages/ContactPage.jsx";
 import AdminDashboardPage from "./pages/AdminDashboardPage.jsx";
 import AdminSchedulesPage from "./pages/AdminSchedulesPage.jsx";
+import AdminActivityPage from "./pages/AdminActivityPage.jsx";
 import AccountPage from "./pages/AccountPage.jsx";
 import DriverAppPage from "./pages/DriverAppPage.jsx";
 
@@ -27,6 +28,7 @@ export default function App() {
               <Route path="/driver" element={<DriverAppPage />} />
               <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/admin/schedules" element={<AdminSchedulesPage />} />
+              <Route path="/admin/activity" element={<AdminActivityPage />} />
               <Route path="/kontakt" element={<ContactPage />} />
             </Route>
           </Routes>
