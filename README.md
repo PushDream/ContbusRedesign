@@ -28,7 +28,6 @@ src/
   pages/DriverAppPage.jsx Supabase-backed driver operations app
 supabase/
   README.md               schema, tests and functions live in contbus-backend
-  tests/database/         pgTAP security, RLS, capacity, and index tests
   App.jsx                 page composition
 public/
   icon.svg, logos and fonts   static assets
