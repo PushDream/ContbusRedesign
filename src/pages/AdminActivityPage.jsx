@@ -134,7 +134,7 @@ export default function AdminActivityPage() {
           )}
 
           {isAdmin && (
-            <section className="admin-panel">
+            <section className="admin-panel admin-activity-panel">
               <div className="admin-activity-filters">
                 <label>
                   <span>{text.activityFilter}</span>
@@ -185,7 +185,7 @@ export default function AdminActivityPage() {
                     <ul>
                       {changeLines(entry).map(({ field, value }) => (
                         <li key={field}>
-                          <code>{field}</code> {value}
+                          <span>{text.activityFields[field] || field.replaceAll("_", " ")}:</span> {value}
                         </li>
                       ))}
                     </ul>
