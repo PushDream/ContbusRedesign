@@ -7075,6 +7075,25 @@ a.contact-big-value:hover {
   font-size: 0.86rem;
 }
 
+.admin-activity-panel {
+  padding: 18px;
+}
+
+.admin-activity-filters select {
+  min-height: 40px;
+  padding: 0 10px;
+  color: var(--text-strong);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: 600;
+}
+
+.admin-activity-list span {
+  color: var(--text-muted);
+}
+
 .admin-activity-filters {
   display: flex;
   flex-wrap: wrap;
@@ -7135,3 +7154,303 @@ a.contact-big-value:hover {
   list-style: none;
   overflow-wrap: anywhere;
 }
+
+/* Admin panel: compact header, tabbed workspaces and shared interaction states. */
+.admin-page {
+  width: min(1320px, calc(100% - 42px));
+  padding-top: 22px;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-hero {
+  align-items: center;
+  padding: 20px 26px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 28px var(--shadow-brand);
+}
+
+.admin-hero .eyebrow {
+  margin: 0;
+}
+
+.admin-hero h1 {
+  margin: 2px 0 4px;
+  font-size: clamp(1.55rem, 2.6vw, 2.15rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.admin-hero p {
+  max-width: 62ch;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.admin-nav {
+  width: 100%;
+  margin: 12px 0 0;
+  padding: 4px;
+  box-shadow: none;
+}
+
+.admin-nav-link {
+  min-height: 36px;
+  font-weight: 700;
+}
+
+.admin-tabs {
+  position: sticky;
+  z-index: 5;
+  top: var(--admin-tabs-top, 74px);
+  display: flex;
+  gap: 2px;
+  margin-top: 10px;
+  padding: 0;
+  overflow-x: auto;
+  background: var(--bg);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  scrollbar-width: none;
+}
+
+.admin-tabs button {
+  display: inline-flex;
+  flex: none;
+  gap: 8px;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 16px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.admin-tabs button:hover {
+  color: var(--text-strong);
+}
+
+.admin-tabs button.active {
+  color: var(--text-strong);
+  background: transparent;
+  border-bottom-color: var(--brand);
+}
+
+.admin-tab-count {
+  min-width: 22px;
+  padding: 1px 6px;
+  color: var(--text-soft);
+  background: var(--surface-muted);
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.admin-tab-count.attention {
+  color: var(--warning);
+  background: var(--warning-soft-bg);
+}
+
+.admin-tab-panel {
+  animation: admin-tab-in 0.2s ease-out;
+}
+
+@keyframes admin-tab-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.admin-panel {
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+
+.admin-trips-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  margin-top: 18px;
+}
+
+.admin-trip-detail {
+  position: sticky;
+  top: calc(var(--admin-tabs-top, 74px) + 58px);
+  max-height: calc(100dvh - var(--admin-tabs-top, 74px) - 76px);
+  overflow-y: auto;
+  scroll-margin-top: calc(var(--admin-tabs-top, 74px) + 58px);
+}
+
+.admin-bookings-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  margin-top: 18px;
+}
+
+.admin-toolbar {
+  flex: 0 1 auto;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.admin-toolbar :is(.primary-button, .secondary-button),
+.admin-toolbar label,
+.admin-toolbar input {
+  min-height: 38px;
+}
+
+.admin-toolbar :is(.primary-button, .secondary-button) {
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.admin-page :is(.eyebrow, .admin-metric span, .admin-metric small) {
+  font-weight: 600;
+}
+
+.admin-panel-header h2 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.admin-metrics-grid,
+.admin-corridors-section {
+  box-shadow: none;
+  border-radius: var(--radius-md);
+}
+
+.admin-metrics-grid {
+  margin-top: 18px;
+}
+
+.admin-corridors-section,
+.admin-command-grid {
+  margin-top: 18px;
+}
+
+.admin-layout {
+  align-items: start;
+}
+
+.admin-users-toolbar input {
+  min-height: 40px;
+  padding: 0 12px;
+  color: var(--text-strong);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+}
+
+.admin-schedules-page .admin-panel > :not(.admin-panel-header) {
+  margin-inline: 18px;
+}
+
+.admin-schedules-page .admin-panel > :last-child {
+  margin-bottom: 18px;
+}
+
+.admin-schedules-page .admin-panel > .admin-auto-generation {
+  margin-top: 14px;
+}
+
+.admin-generate-button {
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+
+.admin-booking-card > div:first-child > span {
+  display: block;
+}
+
+.admin-page button:not(:disabled):active,
+.admin-page a:active {
+  transform: translateY(1px);
+}
+
+.admin-page :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.admin-tabs button:focus-visible {
+  outline-offset: -2px;
+}
+
+@media (max-width: 1120px) {
+  .admin-trips-workspace,
+  .admin-bookings-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-trip-detail {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-page {
+    width: calc(100% - 24px);
+    padding-top: 12px;
+  }
+
+  .admin-hero {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .admin-hero p {
+    display: none;
+  }
+
+  .admin-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-toolbar > :is(label, .admin-user-chip, .admin-live-chip) {
+    min-width: 0;
+  }
+
+  .admin-toolbar > label {
+    grid-column: 1 / -1;
+  }
+
+  .admin-toolbar :is(.primary-button, .secondary-button) {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .admin-nav {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .admin-nav-link {
+    flex: none;
+    padding: 0 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-tab-panel {
+    animation: none;
+  }
+}
+

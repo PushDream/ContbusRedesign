@@ -17,6 +17,7 @@ import { adminCopy } from "../lib/adminCopy.js";
 import { useApp } from "../context/AppContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
 import AdminNav from "../components/AdminNav.jsx";
+import AdminTabs from "../components/AdminTabs.jsx";
 import AdminAuthGate from "../components/AdminAuthGate.jsx";
 import { warsawToday } from "../lib/warsawTime.js";
 
@@ -553,7 +554,7 @@ export default function AdminSchedulesPage() {
       title={text.schedulesTitle}
     >
       {() => (
-      <div className="admin-page">
+      <div className="admin-page admin-schedules-page">
         <section className="admin-hero">
           <div>
             <p className="eyebrow">{text.schedulesEyebrow}</p>
@@ -600,23 +601,17 @@ export default function AdminSchedulesPage() {
           </div>
         )}
 
-        <div className="admin-tabs">
-          {[
-            ["departures", text.tabDepartures],
-            ["stops", text.tabStops],
-            ["fares", text.tabFares],
-            ["trips", text.tabTrips],
-          ].map(([value, label]) => (
-            <button
-              className={activeTab === value ? "active" : ""}
-              key={value}
-              onClick={() => setActiveTab(value)}
-              type="button"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <AdminTabs
+          active={activeTab}
+          label={text.schedulesTitle}
+          onChange={setActiveTab}
+          tabs={[
+            { value: "departures", label: text.tabDepartures },
+            { value: "stops", label: text.tabStops },
+            { value: "fares", label: text.tabFares },
+            { value: "trips", label: text.tabTrips },
+          ]}
+        />
 
         {loading && (
           <div aria-label={text.loadingTrips} className="admin-panel admin-skeleton-panel" role="status">

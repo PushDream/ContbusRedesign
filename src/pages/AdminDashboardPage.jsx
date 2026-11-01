@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Activity,
   AlertTriangle,
@@ -12,6 +13,7 @@ import {
   ClipboardList,
   Download,
   Gauge,
+  LayoutDashboard,
   LogOut,
   MapPin,
   Phone,
@@ -44,6 +46,7 @@ import { adminCopy } from "../lib/adminCopy.js";
 import { useApp } from "../context/AppContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
 import AdminNav from "../components/AdminNav.jsx";
+import AdminTabs from "../components/AdminTabs.jsx";
 import AdminAuthGate from "../components/AdminAuthGate.jsx";
 import { warsawToday } from "../lib/warsawTime.js";
 
@@ -155,6 +158,9 @@ function ReadinessCard({ icon: Icon, label, value, tone }) {
   );
 }
 
+const DASHBOARD_TABS = ["overview", "trips", "bookings", "team"];
+const TRIP_WORKSPACE_STACKED_QUERY = "(max-width: 1120px)";
+
 export default function AdminDashboardPage() {
   const { language } = useApp();
   const text = adminCopy[language] || adminCopy.pl;
@@ -208,6 +214,34 @@ export default function AdminDashboardPage() {
   const [userQuery, setUserQuery] = useState("");
   const [userPage, setUserPage] = useState(1);
   const [printManifestOpen, setPrintManifestOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tripDetailRef = useRef(null);
+
+  const requestedTab = searchParams.get("tab");
+  const activeTab =
+    DASHBOARD_TABS.includes(requestedTab) && (requestedTab !== "team" || isAdmin) ? requestedTab : "overview";
+
+  const setActiveTab = useCallback(
+    (tab) => setSearchParams(tab === "overview" ? {} : { tab }, { replace: true }),
+    [setSearchParams],
+  );
+
+  const openTrip = useCallback(
+    (tripId) => {
+      setSelectedTripId(tripId);
+      setActiveTab("trips");
+    },
+    [setActiveTab],
+  );
+
+  // The list and the detail panel stack on narrow screens, so bring the detail
+  // into view there rather than leaving the selection off-screen.
+  const selectTripFromList = (tripId) => {
+    setSelectedTripId(tripId);
+    if (window.matchMedia(TRIP_WORKSPACE_STACKED_QUERY).matches) {
+      tripDetailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   const loadDashboard = useCallback(async () => {
     if (!staff) return;
@@ -820,6 +854,21 @@ export default function AdminDashboardPage() {
     notify(text.dayExported, "success");
   };
 
+
+  const attentionCount = attentionItems.reduce((total, item) => total + item.count, 0);
+  const dashboardTabs = [
+    {
+      value: "overview",
+      label: text.dashboardTabOverview,
+      icon: LayoutDashboard,
+      count: attentionCount,
+      tone: "attention",
+    },
+    { value: "trips", label: text.dashboardTabTrips, icon: Bus, count: summary.trips },
+    { value: "bookings", label: text.dashboardTabBookings, icon: Ticket, count: summary.bookings },
+    ...(isAdmin ? [{ value: "team", label: text.dashboardTabTeam, icon: UserCog }] : []),
+  ];
+
   return (
     <AdminAuthGate
       authChecking={authChecking}
@@ -899,6 +948,11 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
+      <AdminTabs active={activeTab} label={text.dispatcherOps} onChange={setActiveTab} tabs={dashboardTabs} />
+
+      <div aria-labelledby={`admin-tab-${activeTab}`} className="admin-tab-panel" key={activeTab} role="tabpanel">
+      {activeTab === "overview" && (
+        <>
       <section className="admin-metrics-grid">
         <MetricCard icon={Bus} label={text.trips} value={summary.trips || 0} hint={date} />
         <MetricCard icon={Ticket} label={text.bookings} value={summary.bookings || 0} hint={text.notCancelled} />
@@ -906,45 +960,6 @@ export default function AdminDashboardPage() {
         <MetricCard icon={CircleDollarSign} label={text.sales} value={money(summary.revenue, text)} hint={text.paidDemo} />
         <MetricCard icon={Route} label={text.activeRoutes} value={summary.routes || routes.length} />
         <MetricCard icon={ClipboardList} label={text.vehicles} value={summary.vehicles || 0} hint={text.staffAuthHint} />
-      </section>
-
-      {/* Fleet Operational Corridors */}
-      <section className="admin-corridors-section">
-        <div className="admin-panel-header">
-          <div>
-            <p className="eyebrow">{text.fleetCorridors}</p>
-            <h2>{text.activeRoutes}</h2>
-          </div>
-          <Activity size={18} />
-        </div>
-        <div className="admin-corridors-grid">
-          {corridorStats.map((c) => (
-            <article className="admin-corridor-card" key={c.id}>
-              <div className="admin-corridor-top">
-                <h3>{c.name}</h3>
-                <span className={`admin-corridor-pill ${c.active > 0 ? "live" : "idle"}`}>
-                  {c.active > 0 ? `${c.active} ${text.activeEnRoute}` : text.tripStatusLabels?.scheduled || "Plan"}
-                </span>
-              </div>
-              <div className="admin-corridor-metrics">
-                <div>
-                  <span>{text.trips}</span>
-                  <strong>{c.total}</strong>
-                </div>
-                <div>
-                  <span>{text.punctuality}</span>
-                  <strong className={c.punctuality >= 90 ? "text-good" : "text-warn"}>
-                    {c.punctuality}%
-                  </strong>
-                </div>
-                <div>
-                  <span>{text.departure}</span>
-                  <strong>{c.nextTripTime || "--:--"}</strong>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
       </section>
 
       <section className="admin-command-grid">
@@ -977,7 +992,7 @@ export default function AdminDashboardPage() {
                     <span>{item.label}</span>
                   </div>
                   {targetTrip && (
-                    <button onClick={() => setSelectedTripId(targetTrip.id)} type="button">
+                    <button onClick={() => openTrip(targetTrip.id)} type="button">
                       {text.fixNow}
                     </button>
                   )}
@@ -1030,8 +1045,319 @@ export default function AdminDashboardPage() {
         </div>
       </section>
 
-      <section className="admin-ops-grid" aria-label={text.dispatcherOps}>
+      {/* Fleet Operational Corridors */}
+      <section className="admin-corridors-section">
+        <div className="admin-panel-header">
+          <div>
+            <p className="eyebrow">{text.fleetCorridors}</p>
+            <h2>{text.activeRoutes}</h2>
+          </div>
+          <Activity size={18} />
+        </div>
+        <div className="admin-corridors-grid">
+          {corridorStats.map((c) => (
+            <article className="admin-corridor-card" key={c.id}>
+              <div className="admin-corridor-top">
+                <h3>{c.name}</h3>
+                <span className={`admin-corridor-pill ${c.active > 0 ? "live" : "idle"}`}>
+                  {c.active > 0 ? `${c.active} ${text.activeEnRoute}` : text.tripStatusLabels?.scheduled || "Plan"}
+                </span>
+              </div>
+              <div className="admin-corridor-metrics">
+                <div>
+                  <span>{text.trips}</span>
+                  <strong>{c.total}</strong>
+                </div>
+                <div>
+                  <span>{text.punctuality}</span>
+                  <strong className={c.punctuality >= 90 ? "text-good" : "text-warn"}>
+                    {c.punctuality}%
+                  </strong>
+                </div>
+                <div>
+                  <span>{text.departure}</span>
+                  <strong>{c.nextTripTime || "--:--"}</strong>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="admin-layout">
+      <section className="admin-panel admin-timeline-panel">
+        <div className="admin-panel-header">
+          <div>
+            <p className="eyebrow">{text.today}</p>
+            <h2>{text.liveTimeline}</h2>
+          </div>
+          <Activity size={18} />
+        </div>
+        <div className="admin-timeline">
+          {timelineItems.length === 0 && <p className="admin-empty">{text.noTimeline}</p>}
+          {timelineItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                className={`admin-timeline-item ${item.tone || ""}`}
+                key={item.id}
+                onClick={() => item.tripId && openTrip(item.tripId)}
+                type="button"
+              >
+                <span className="admin-timeline-time">{formatDateTime(item.at, text)}</span>
+                <span className="admin-timeline-icon">
+                  <Icon size={16} />
+                </span>
+                <span className="admin-timeline-copy">
+                  <strong>{item.title}</strong>
+                  <small>
+                    {item.label} · {item.detail}
+                  </small>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+        <aside className="admin-side">
+          <div className="admin-panel compact">
+            <div className="admin-panel-header">
+              <div>
+                <p className="eyebrow">{text.routes}</p>
+                <h2>{text.salesByRoute}</h2>
+              </div>
+            </div>
+            <div className="admin-route-list">
+              {routes.map((route) => (
+                <div className="admin-route-row" key={route.id}>
+                  <div>
+                    <strong>{route.code}</strong>
+                    <span>
+                      {route.origin_name} → {route.destination_name}
+                    </span>
+                  </div>
+                  <div>
+                    <strong>{route.trips_today || 0}</strong>
+                    <span>{text.routeTrips}</span>
+                  </div>
+                  <div>
+                    <strong>{money(route.revenue_today, text)}</strong>
+                    <span>{route.bookings_today || 0} {text.reservationsShort}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="admin-panel compact">
+            <div className="admin-panel-header">
+              <div>
+                <p className="eyebrow">{text.sales}</p>
+                <h2>{text.recentBookings}</h2>
+              </div>
+              <Activity size={18} />
+            </div>
+            <div className="admin-booking-list">
+              {recentBookings.length === 0 && <p className="admin-empty">{text.noVisibleBookings}</p>}
+              {recentBookings.map((booking) => (
+                <div className="admin-booking-row" key={booking.id}>
+                  <div>
+                    <strong>{booking.booking_reference}</strong>
+                    <span>
+                      {booking.origin_name} → {booking.destination_name}
+                    </span>
+                  </div>
+                  <div>
+                    <strong>{money(booking.total_amount, text)}</strong>
+                    <span>{booking.passenger_count} {text.passengersShort}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </aside>
+      </section>
+        </>
+      )}
+
+      {activeTab === "trips" && (
+      <section className="admin-trips-workspace" aria-label={text.dispatcherOps}>
         <div className="admin-panel">
+          <div className="admin-panel-header">
+            <div>
+              <p className="eyebrow">{text.today}</p>
+              <h2>{text.operationalTrips}</h2>
+            </div>
+            {busiestTrip && (
+              <span className="admin-chip">
+                {text.busiest} {timeText(busiestTrip.departure_time)}
+              </span>
+            )}
+          </div>
+
+          <div className="admin-trip-list">
+            <div className="admin-list-toolbar admin-dashboard-trip-toolbar">
+              <label className="admin-search-field">
+                <span className="sr-only">{text.filterTripsLabel}</span>
+                <input onChange={(event) => { setTripListQuery(event.target.value); setTripListPage(1); }} placeholder={text.tripSearchPlaceholder} type="search" value={tripListQuery} />
+              </label>
+              <label>
+                <span className="sr-only">{text.tripStatusLabel}</span>
+                <select onChange={(event) => { setTripListStatus(event.target.value); setTripListPage(1); }} value={tripListStatus}>
+                  <option value="all">{text.allStatuses}</option>
+                  {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
+              <label>
+                <span className="sr-only">{text.sortBy}</span>
+                <select onChange={(event) => { setTripListSort(event.target.value); setTripListPage(1); }} value={tripListSort}>
+                  <option value="time">{text.sortBy}: {text.sortTime}</option>
+                  <option value="occupancy">{text.sortBy}: {text.sortOccupancy}</option>
+                  <option value="route">{text.sortBy}: {text.sortRoute}</option>
+                  <option value="status">{text.sortBy}: {text.sortStatus}</option>
+                </select>
+              </label>
+              <button
+                className="admin-link-button"
+                disabled={!visibleOperationalTrips.length}
+                onClick={() => setSelectedTripIds(visibleOperationalTrips.map((trip) => trip.id))}
+                type="button"
+              >
+                {text.selectAllVisible}
+              </button>
+            </div>
+
+            {selectedTripIds.length > 0 && (
+              <div className="admin-bulk-bar" role="group" aria-label={text.bulkAssign}>
+                <strong>
+                  {selectedTripIds.length} {text.selectedCount}
+                </strong>
+                <label>
+                  <span className="sr-only">{text.bulkVehicle}</span>
+                  <select
+                    disabled={bulkSaving}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      if (value) applyBulkAssignment({ vehicle_id: value });
+                      event.target.value = "";
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="">{text.bulkVehicle}</option>
+                    {vehicles.map((vehicle) => (
+                      <option key={vehicle.id} value={vehicle.id}>{vehicle.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="sr-only">{text.bulkDriver}</span>
+                  <select
+                    disabled={bulkSaving}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      if (value) applyBulkAssignment({ driver_id: value });
+                      event.target.value = "";
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="">{text.bulkDriver}</option>
+                    {drivers.map((driver) => (
+                      <option key={driver.id} value={driver.id}>{driver.full_name || text.unnamed}</option>
+                    ))}
+                  </select>
+                </label>
+                {bulkSaving && <span className="admin-bulk-status">{text.bulkWorking}</span>}
+                <button className="admin-link-button" onClick={() => setSelectedTripIds([])} type="button">
+                  {text.clearSelection}
+                </button>
+              </div>
+            )}
+            {loading && (
+              <div aria-label={text.loadingTrips} className="admin-table-skeleton" role="status">
+                {[1, 2, 3, 4].map((item) => <span className="skeleton-block row" key={item} />)}
+              </div>
+            )}
+            {!loading && filteredOperationalTrips.length === 0 && <p className="admin-empty">{text.noTripsForDate}</p>}
+
+            {visibleOperationalTrips.map((trip) => {
+              const load = occupancy(trip.passenger_count, trip.capacity);
+              return (
+                <article
+                  className={trip.id === selectedTrip?.id ? "admin-trip-row selected" : "admin-trip-row"}
+                  key={trip.id}
+                  onClick={() => selectTripFromList(trip.id)}
+                >
+                  <label
+                    className="admin-trip-select"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <span className="sr-only">
+                      {text.selectTrip}: {timeText(trip.departure_time)} {trip.route_label}
+                    </span>
+                    <input
+                      checked={selectedTripIds.includes(trip.id)}
+                      onChange={() => toggleTripSelection(trip.id)}
+                      type="checkbox"
+                    />
+                  </label>
+
+                  <div className="admin-trip-time">
+                    <strong>{timeText(trip.departure_time)}</strong>
+                    <span>{timeText(trip.arrival_time)}</span>
+                  </div>
+
+                  <div className="admin-trip-main">
+                    <div className="admin-trip-title">
+                      <strong>
+                        {trip.origin_name} → {trip.destination_name}
+                      </strong>
+                      <span className={`admin-status ${trip.status}`}>{statusLabels[trip.status] || trip.status}</span>
+                    </div>
+                    <div className="admin-trip-meta">
+                      <span>{trip.route_code}</span>
+                      <span>{trip.platform || text.noPlatform}</span>
+                      <span>{trip.vehicle?.label || text.vehicleUnassigned}</span>
+                      {trip.driver?.phone ? (
+                        <a
+                          className="admin-driver-call"
+                          href={`tel:${trip.driver.phone}`}
+                          onClick={(event) => event.stopPropagation()}
+                          title={`${text.callDriver}: ${trip.driver.phone}`}
+                        >
+                          <Phone size={13} aria-hidden="true" />
+                          {trip.driver.full_name || text.driverUnassigned}
+                        </a>
+                      ) : (
+                        <span>{trip.driver?.full_name || text.driverUnassigned}</span>
+                      )}
+                    </div>
+                    <div className="admin-progress">
+                      <span style={{ width: `${load}%` }} />
+                    </div>
+                  </div>
+
+                  <div className="admin-trip-numbers">
+                    <strong>
+                      {trip.passenger_count || 0}/{trip.capacity}
+                    </strong>
+                    <span>{trip.booking_count || 0} {text.reservationsShort}</span>
+                    <span>{money(trip.revenue_total, text)}</span>
+                  </div>
+                </article>
+              );
+            })}
+            {filteredOperationalTrips.length > tripListPageSize && (
+              <div className="admin-pagination">
+                <button disabled={tripListPage === 1} onClick={() => setTripListPage((page) => page - 1)} type="button">{text.prevPage}</button>
+                <span>{text.pageOf.replace("{page}", tripListPage).replace("{count}", tripListPageCount)}</span>
+                <button disabled={tripListPage === tripListPageCount} onClick={() => setTripListPage((page) => page + 1)} type="button">{text.nextPage}</button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="admin-panel admin-trip-detail" ref={tripDetailRef}>
           <div className="admin-panel-header">
             <div>
               <p className="eyebrow">{text.operations}</p>
@@ -1279,7 +1605,11 @@ export default function AdminDashboardPage() {
             <p className="admin-empty">{text.chooseTrip}</p>
           )}
         </div>
+      </section>
+      )}
 
+      {activeTab === "bookings" && (
+      <section className="admin-bookings-workspace" aria-label={text.bookings}>
         <aside className="admin-panel compact">
           <div className="admin-panel-header">
             <div>
@@ -1408,8 +1738,9 @@ export default function AdminDashboardPage() {
           </div>
         </aside>
       </section>
+      )}
 
-      {isAdmin && (
+      {activeTab === "team" && isAdmin && (
         <section className="admin-panel admin-users-panel">
           <div className="admin-panel-header">
             <div>
@@ -1557,275 +1888,7 @@ export default function AdminDashboardPage() {
           )}
         </section>
       )}
-
-      <section className="admin-panel admin-timeline-panel">
-        <div className="admin-panel-header">
-          <div>
-            <p className="eyebrow">{text.today}</p>
-            <h2>{text.liveTimeline}</h2>
-          </div>
-          <Activity size={18} />
-        </div>
-        <div className="admin-timeline">
-          {timelineItems.length === 0 && <p className="admin-empty">{text.noTimeline}</p>}
-          {timelineItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                className={`admin-timeline-item ${item.tone || ""}`}
-                key={item.id}
-                onClick={() => item.tripId && setSelectedTripId(item.tripId)}
-                type="button"
-              >
-                <span className="admin-timeline-time">{formatDateTime(item.at, text)}</span>
-                <span className="admin-timeline-icon">
-                  <Icon size={16} />
-                </span>
-                <span className="admin-timeline-copy">
-                  <strong>{item.title}</strong>
-                  <small>
-                    {item.label} · {item.detail}
-                  </small>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="admin-layout">
-        <div className="admin-panel">
-          <div className="admin-panel-header">
-            <div>
-              <p className="eyebrow">{text.today}</p>
-              <h2>{text.operationalTrips}</h2>
-            </div>
-            {busiestTrip && (
-              <span className="admin-chip">
-                {text.busiest} {timeText(busiestTrip.departure_time)}
-              </span>
-            )}
-          </div>
-
-          <div className="admin-trip-list">
-            <div className="admin-list-toolbar admin-dashboard-trip-toolbar">
-              <label className="admin-search-field">
-                <span className="sr-only">{text.filterTripsLabel}</span>
-                <input onChange={(event) => { setTripListQuery(event.target.value); setTripListPage(1); }} placeholder={text.tripSearchPlaceholder} type="search" value={tripListQuery} />
-              </label>
-              <label>
-                <span className="sr-only">{text.tripStatusLabel}</span>
-                <select onChange={(event) => { setTripListStatus(event.target.value); setTripListPage(1); }} value={tripListStatus}>
-                  <option value="all">{text.allStatuses}</option>
-                  {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select>
-              </label>
-              <label>
-                <span className="sr-only">{text.sortBy}</span>
-                <select onChange={(event) => { setTripListSort(event.target.value); setTripListPage(1); }} value={tripListSort}>
-                  <option value="time">{text.sortBy}: {text.sortTime}</option>
-                  <option value="occupancy">{text.sortBy}: {text.sortOccupancy}</option>
-                  <option value="route">{text.sortBy}: {text.sortRoute}</option>
-                  <option value="status">{text.sortBy}: {text.sortStatus}</option>
-                </select>
-              </label>
-              <button
-                className="admin-link-button"
-                disabled={!visibleOperationalTrips.length}
-                onClick={() => setSelectedTripIds(visibleOperationalTrips.map((trip) => trip.id))}
-                type="button"
-              >
-                {text.selectAllVisible}
-              </button>
-            </div>
-
-            {selectedTripIds.length > 0 && (
-              <div className="admin-bulk-bar" role="group" aria-label={text.bulkAssign}>
-                <strong>
-                  {selectedTripIds.length} {text.selectedCount}
-                </strong>
-                <label>
-                  <span className="sr-only">{text.bulkVehicle}</span>
-                  <select
-                    disabled={bulkSaving}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      if (value) applyBulkAssignment({ vehicle_id: value });
-                      event.target.value = "";
-                    }}
-                    defaultValue=""
-                  >
-                    <option value="">{text.bulkVehicle}</option>
-                    {vehicles.map((vehicle) => (
-                      <option key={vehicle.id} value={vehicle.id}>{vehicle.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span className="sr-only">{text.bulkDriver}</span>
-                  <select
-                    disabled={bulkSaving}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      if (value) applyBulkAssignment({ driver_id: value });
-                      event.target.value = "";
-                    }}
-                    defaultValue=""
-                  >
-                    <option value="">{text.bulkDriver}</option>
-                    {drivers.map((driver) => (
-                      <option key={driver.id} value={driver.id}>{driver.full_name || text.unnamed}</option>
-                    ))}
-                  </select>
-                </label>
-                {bulkSaving && <span className="admin-bulk-status">{text.bulkWorking}</span>}
-                <button className="admin-link-button" onClick={() => setSelectedTripIds([])} type="button">
-                  {text.clearSelection}
-                </button>
-              </div>
-            )}
-            {loading && (
-              <div aria-label={text.loadingTrips} className="admin-table-skeleton" role="status">
-                {[1, 2, 3, 4].map((item) => <span className="skeleton-block row" key={item} />)}
-              </div>
-            )}
-            {!loading && filteredOperationalTrips.length === 0 && <p className="admin-empty">{text.noTripsForDate}</p>}
-
-            {visibleOperationalTrips.map((trip) => {
-              const load = occupancy(trip.passenger_count, trip.capacity);
-              return (
-                <article
-                  className={trip.id === selectedTrip?.id ? "admin-trip-row selected" : "admin-trip-row"}
-                  key={trip.id}
-                  onClick={() => setSelectedTripId(trip.id)}
-                >
-                  <label
-                    className="admin-trip-select"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    <span className="sr-only">
-                      {text.selectTrip}: {timeText(trip.departure_time)} {trip.route_label}
-                    </span>
-                    <input
-                      checked={selectedTripIds.includes(trip.id)}
-                      onChange={() => toggleTripSelection(trip.id)}
-                      type="checkbox"
-                    />
-                  </label>
-
-                  <div className="admin-trip-time">
-                    <strong>{timeText(trip.departure_time)}</strong>
-                    <span>{timeText(trip.arrival_time)}</span>
-                  </div>
-
-                  <div className="admin-trip-main">
-                    <div className="admin-trip-title">
-                      <strong>
-                        {trip.origin_name} → {trip.destination_name}
-                      </strong>
-                      <span className={`admin-status ${trip.status}`}>{statusLabels[trip.status] || trip.status}</span>
-                    </div>
-                    <div className="admin-trip-meta">
-                      <span>{trip.route_code}</span>
-                      <span>{trip.platform || text.noPlatform}</span>
-                      <span>{trip.vehicle?.label || text.vehicleUnassigned}</span>
-                      {trip.driver?.phone ? (
-                        <a
-                          className="admin-driver-call"
-                          href={`tel:${trip.driver.phone}`}
-                          onClick={(event) => event.stopPropagation()}
-                          title={`${text.callDriver}: ${trip.driver.phone}`}
-                        >
-                          <Phone size={13} aria-hidden="true" />
-                          {trip.driver.full_name || text.driverUnassigned}
-                        </a>
-                      ) : (
-                        <span>{trip.driver?.full_name || text.driverUnassigned}</span>
-                      )}
-                    </div>
-                    <div className="admin-progress">
-                      <span style={{ width: `${load}%` }} />
-                    </div>
-                  </div>
-
-                  <div className="admin-trip-numbers">
-                    <strong>
-                      {trip.passenger_count || 0}/{trip.capacity}
-                    </strong>
-                    <span>{trip.booking_count || 0} {text.reservationsShort}</span>
-                    <span>{money(trip.revenue_total, text)}</span>
-                  </div>
-                </article>
-              );
-            })}
-            {filteredOperationalTrips.length > tripListPageSize && (
-              <div className="admin-pagination">
-                <button disabled={tripListPage === 1} onClick={() => setTripListPage((page) => page - 1)} type="button">{text.prevPage}</button>
-                <span>{text.pageOf.replace("{page}", tripListPage).replace("{count}", tripListPageCount)}</span>
-                <button disabled={tripListPage === tripListPageCount} onClick={() => setTripListPage((page) => page + 1)} type="button">{text.nextPage}</button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <aside className="admin-side">
-          <div className="admin-panel compact">
-            <div className="admin-panel-header">
-              <div>
-                <p className="eyebrow">{text.routes}</p>
-                <h2>{text.salesByRoute}</h2>
-              </div>
-            </div>
-            <div className="admin-route-list">
-              {routes.map((route) => (
-                <div className="admin-route-row" key={route.id}>
-                  <div>
-                    <strong>{route.code}</strong>
-                    <span>
-                      {route.origin_name} → {route.destination_name}
-                    </span>
-                  </div>
-                  <div>
-                    <strong>{route.trips_today || 0}</strong>
-                    <span>{text.routeTrips}</span>
-                  </div>
-                  <div>
-                    <strong>{money(route.revenue_today, text)}</strong>
-                    <span>{route.bookings_today || 0} {text.reservationsShort}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="admin-panel compact">
-            <div className="admin-panel-header">
-              <div>
-                <p className="eyebrow">{text.sales}</p>
-                <h2>{text.recentBookings}</h2>
-              </div>
-              <Activity size={18} />
-            </div>
-            <div className="admin-booking-list">
-              {recentBookings.length === 0 && <p className="admin-empty">{text.noVisibleBookings}</p>}
-              {recentBookings.map((booking) => (
-                <div className="admin-booking-row" key={booking.id}>
-                  <div>
-                    <strong>{booking.booking_reference}</strong>
-                    <span>
-                      {booking.origin_name} → {booking.destination_name}
-                    </span>
-                  </div>
-                  <div>
-                    <strong>{money(booking.total_amount, text)}</strong>
-                    <span>{booking.passenger_count} {text.passengersShort}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </aside>
-      </section>
+      </div>
 
       {/* Printable Passenger Manifest Modal */}
       {printManifestOpen && selectedTrip && (
