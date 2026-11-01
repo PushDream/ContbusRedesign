@@ -1,9 +1,10 @@
-import { CalendarClock, Gauge } from "lucide-react";
+import { CalendarClock, Gauge, History } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const items = [
   { key: "dashboard", to: "/admin", icon: Gauge, labelKey: "navDashboard" },
   { key: "schedules", to: "/admin/schedules", icon: CalendarClock, labelKey: "navSchedules" },
+  { key: "activity", to: "/admin/activity", icon: History, labelKey: "navActivity" },
 ];
 
 export default function AdminNav({ active, text }) {

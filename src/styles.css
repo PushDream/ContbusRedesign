@@ -7050,3 +7050,88 @@ a.contact-big-value:hover {
   }
 }
 
+.admin-auto-generation {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.admin-auto-generation svg {
+  flex: none;
+  color: var(--brand);
+}
+
+.admin-auto-generation strong {
+  color: var(--text);
+}
+
+.admin-auto-generation p {
+  margin: 2px 0 0;
+  font-size: 0.86rem;
+}
+
+.admin-activity-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.admin-activity-filters label {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.admin-activity-list {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.admin-activity-list > li {
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.admin-activity-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.admin-activity-head time,
+.admin-activity-list p {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.admin-activity-list p {
+  margin: 2px 0 6px;
+}
+
+.admin-activity-list ul {
+  display: grid;
+  gap: 2px;
+  padding: 0;
+  margin: 0;
+  font-size: 0.86rem;
+  list-style: none;
+  overflow-wrap: anywhere;
+}

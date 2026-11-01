@@ -117,6 +117,13 @@ export async function generateContbusTrips(startDate, endDate) {
   return Number(data) || 0;
 }
 
+export async function fetchTripGenerationStatus() {
+  ensureConfigured();
+  const { data, error } = await supabase.rpc("trip_generation_status");
+  if (error) throw error;
+  return data;
+}
+
 export async function fetchTripAssignments(startDate, endDate) {
   ensureConfigured();
 
