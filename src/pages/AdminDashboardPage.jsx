@@ -1722,6 +1722,9 @@ export default function AdminDashboardPage() {
                         {ticketAssessment.passenger_name}
                       </span>
                     )}
+                    {ticketAssessment.result === "transferable" && ticketAssessment.passenger_count > 1 && (
+                      <span>{text.transferGroupNote.replace("{count}", ticketAssessment.passenger_count)}</span>
+                    )}
                   </div>
                 )}
                 <button
