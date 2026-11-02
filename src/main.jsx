@@ -3,6 +3,12 @@ import App from "./App.jsx";
 import { ToastProvider } from "./lib/ToastProvider.jsx";
 import "./styles.css";
 
+// A recovery link can land on any page, depending on the project's redirect
+// settings, so send it to the screen that can finish the reset.
+if (window.location.hash.includes("type=recovery") && window.location.pathname !== "/reset-password") {
+  window.location.replace(`/reset-password${window.location.hash}`);
+}
+
 const legacyWorkerCleanupKey = "contbus-legacy-worker-cleanup-v1";
 
 async function clearLegacyServiceWorker() {
