@@ -250,7 +250,18 @@ function mapLookupBooking(booking) {
     platform: booking.platform,
     seatNumbers: booking.seat_numbers || [],
     ticketCodes: booking.ticket_codes || [],
+    tripId: booking.trip_id || null,
   };
+}
+
+// The booked bus's status and, while it runs, its last GPS position. Public on
+// purpose: it carries no passenger or driver details.
+export async function fetchTripLive(tripId) {
+  if (!isSupabaseConfigured || !tripId) return null;
+
+  const { data, error } = await supabase.rpc("public_trip_position", { p_trip_id: tripId });
+  if (error) throw error;
+  return data || null;
 }
 
 export async function lookupPublicBooking({ code, email }) {
