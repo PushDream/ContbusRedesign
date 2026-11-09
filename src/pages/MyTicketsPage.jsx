@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { useApp } from "../context/AppContext.jsx";
 import { useToast } from "../lib/ToastProvider.jsx";
 import { logoUrl } from "../data/content.js";
+import LiveTracker from "../components/LiveTracker.jsx";
 import TicketQr from "../components/TicketQr.jsx";
 import { cancelPublicBooking, lookupPublicBooking, requestTicketPdf } from "../lib/database.js";
 
@@ -154,6 +155,8 @@ export default function MyTicketsPage() {
                 <span>{route.to}</span>
               </div>
             </div>
+
+            {!cancelled && <LiveTracker booking={ticket} key={ticket.tripId} t={t} />}
 
             <div className="ticket-card-details">
               <div>
