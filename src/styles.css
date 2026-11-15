@@ -4053,138 +4053,179 @@ h3 {
   box-shadow: inset 0 0 0 2px #f5a623;
 }
 
-/* ---------- Live tracker ---------- */
+/* ---------- Live trip status (My tickets) ---------- */
 
-.tracker-panel {
-  margin-top: 26px;
-}
-
-.tracker-panel-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0 0 12px;
-  color: var(--brand-dark);
-  font-size: 0.78rem;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.tracker-card {
+.trip-live {
   display: grid;
-  gap: 22px;
-  padding: 26px;
-  background: var(--bg-elevated);
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface-soft);
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
-  box-shadow: 0 18px 58px var(--shadow);
+  border-radius: var(--radius-md);
 }
 
-.tracker-top {
+.trip-live-top {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
-.tracker-top h3 {
-  margin: 8px 0 0;
-}
-
-.tracker-status-pill {
+.trip-live-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: 8px;
+  padding: 6px 12px;
   color: var(--brand-dark);
   background: var(--brand-soft-bg);
-  border-radius: 999px;
-  font-size: 0.76rem;
-  font-weight: 900;
-  text-transform: uppercase;
+  border-radius: var(--radius-pill);
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
-.tracker-eta {
+.trip-live.tone-warning .trip-live-pill {
+  color: var(--warning);
+  background: var(--warning-soft-bg);
+}
+
+.trip-live.tone-danger .trip-live-pill {
+  color: var(--danger);
+  background: var(--danger-soft-bg);
+}
+
+.trip-live.tone-muted .trip-live-pill {
+  color: var(--text-soft);
+  background: var(--surface-muted);
+}
+
+.trip-live-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.trip-live-figure {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   text-align: right;
 }
 
-.tracker-eta span {
+.trip-live-figure span {
   color: var(--text-muted);
-  font-size: 0.78rem;
-  font-weight: 800;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
-.tracker-eta strong {
-  color: var(--brand);
-  font-size: 1.6rem;
+.trip-live-figure strong {
+  color: var(--text-strong);
+  font-size: 1.25rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
 }
 
-.tracker-track {
+.trip-live-track {
   position: relative;
-  height: 10px;
-  margin: 24px 0 6px;
+  height: 6px;
+  margin: 14px 6px;
   background: var(--surface-muted);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
-.tracker-fill {
+.trip-live-fill {
   height: 100%;
   background: var(--brand);
-  border-radius: 999px;
+  border-radius: inherit;
   transition: width 0.6s ease;
 }
 
-.tracker-bus {
+.trip-live-end {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  background: var(--bg-elevated);
+  border: 2px solid var(--brand);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.trip-live-end.start {
+  left: 0;
+}
+
+.trip-live-end.finish {
+  left: 100%;
+  border-color: var(--border);
+}
+
+.trip-live-track.is-done .trip-live-end.finish {
+  border-color: var(--brand);
+}
+
+.trip-live-bus {
   position: absolute;
   top: 50%;
   display: grid;
   place-items: center;
   width: 30px;
   height: 30px;
-  color: #ffffff;
-  background: var(--brand);
+  color: var(--on-brand);
+  background: var(--brand-fill);
   border: 3px solid var(--bg-elevated);
-  border-radius: 999px;
-  box-shadow: 0 8px 18px rgba(0, 138, 61, 0.4);
+  border-radius: 50%;
+  box-shadow: 0 6px 16px var(--shadow-brand);
   transform: translate(-50%, -50%);
   transition: left 0.6s ease;
 }
 
-.tracker-node {
-  position: absolute;
-  top: 50%;
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  color: var(--text-muted);
-  background: var(--bg-elevated);
-  border: 2px solid var(--border);
-  border-radius: 999px;
-  transform: translate(-50%, -50%);
+.trip-live.tone-warning .trip-live-fill,
+.trip-live.tone-warning .trip-live-bus {
+  background: var(--warning-solid);
 }
 
-.tracker-stops-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
+.trip-live.tone-muted .trip-live-fill,
+.trip-live.tone-muted .trip-live-bus {
+  background: var(--text-muted);
+  box-shadow: none;
+}
+
+.trip-live-note {
+  margin: 0;
   color: var(--text-muted);
-  font-size: 0.78rem;
-  font-weight: 750;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+@keyframes trip-live-pulse {
+  from {
+    box-shadow: 0 0 0 0 currentColor;
+  }
+
+  to {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .trip-live-dot.is-pulsing {
+    animation: trip-live-pulse 1.8s ease-out infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trip-live-fill,
+  .trip-live-bus {
+    transition: none;
+  }
 }
 
 /* ---------- Manage booking ---------- */
 
-.manage-layout {
-  display: grid;
-  grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.15fr);
-  gap: 22px;
-  align-items: start;
-}
 
 .manage-form {
   display: grid;
@@ -4228,30 +4269,8 @@ h3 {
   border-color: var(--danger);
 }
 
-.manage-result {
-  display: grid;
-  gap: 16px;
-  padding: 22px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-soft);
-  border-radius: 8px;
-  box-shadow: 0 18px 58px var(--shadow);
-}
 
-.manage-result-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
 
-.manage-result-top span {
-  display: block;
-  margin-top: 4px;
-  color: var(--text-muted);
-  font-size: 0.86rem;
-  font-weight: 800;
-}
 
 .status-cancelled {
   color: var(--danger);
@@ -4502,10 +4521,6 @@ h3 {
 /* ---------- Responsive: new components ---------- */
 
 @media (max-width: 1020px) {
-  .manage-layout {
-    grid-template-columns: 1fr;
-  }
-
   .extras-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -4565,9 +4580,6 @@ h3 {
     grid-template-columns: 1fr;
   }
 
-  .tracker-stops-row {
-    display: none;
-  }
 
   .toast-stack {
     left: 12px;
